@@ -1,4 +1,5 @@
 use crate::buff::Buffer;
+use std::path::PathBuf;
 
 
 #[derive(Debug, PartialEq)]
@@ -13,6 +14,7 @@ pub struct App {
     pub buffer: Buffer,
     pub cursor_x: usize,
     pub cursor_y: usize,
+    pub file_path: Option<PathBuf>,
 }
 
 impl App {
@@ -22,7 +24,28 @@ impl App {
             buffer: Buffer::new(),
             cursor_x: 0,
             cursor_y: 0,
+            file_path: None,
         }
+    }
+
+    pub fn with_file(path: PathBuf) -> Self {
+        let buffer = Buffer::load(&path)
+            .unwrap_or_else(|_| Buffer::new());
+
+        Self {
+            mode: AppMode::Normal,
+            buffer,
+            cursor_x: 0,
+            cursor_y: 0,
+            file_path: Some(path),
+        }
+    }
+
+    pub fn save(&self) -> std::io::Result<()> {
+        if let Some(path) = &self.file_path {
+            self.buffer.save(path)?;
+        }
+        Ok(())
     }
 
     pub fn move_cursor_left(&mut self) {
@@ -70,7 +93,6 @@ impl App {
             self.buffer.delete_char(self.cursor_y, self.cursor_x);
             self.cursor_x -= 1;
         } else if self.cursor_y > 0 {
-            let prev_line_len = self.buffer.lines[self.cursor_y - 1].len();
             if let Some(new_x) = self.buffer.join_lines(self.cursor_y) {
                 self.cursor_y -= 1;
                 self.cursor_x = new_x;

@@ -1,3 +1,8 @@
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Write};
+use std::path::Path;
+
+
 pub struct Buffer {
     pub lines: Vec<String>,
 }
@@ -7,6 +12,34 @@ impl Buffer {
         Self {
             lines: vec![String::new()],
         }
+    }
+
+    pub fn load<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+
+        let lines: Vec<String> = reader
+            .lines()
+            .collect::<Result<_, _>>()?;
+
+        if lines.is_empty() {
+            Ok(Self { lines: vec![String::new()] })
+        } else {
+            Ok(Self { lines })
+        }
+    }
+
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        let mut file = File::create(path)?;
+
+        for (i, line) in self.lines.iter().enumerate() {
+            file.write_all(line.as_bytes())?;
+
+            if i < self.lines.len() - 1 {
+                file.write_all(b"\n")?;
+            }
+        }
+        Ok(())
     }
 
     pub fn insert_char(&mut self, row: usize, col: usize, ch: char) {

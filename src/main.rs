@@ -12,10 +12,19 @@ use crossterm::event::{
     KeyEventKind,
 };
 use tui::Tui;
+use std::env;
+use::std::path::PathBuf;
 
 
 fn main() -> Result<()> {
-    let mut app = App::new();
+    let args: Vec<String> = env::args().collect();
+    
+    let mut app = if args.len() > 1 {
+        App::with_file(PathBuf::from(&args[1]))
+    } else {
+        App::new()
+    };
+
     let mut tui = Tui::new()?;
 
     while app.mode != AppMode::Quit {
@@ -28,6 +37,7 @@ fn main() -> Result<()> {
                 AppMode::Normal => match key.code {
                     KeyCode::Char('q') => app.mode = AppMode::Quit,
                     KeyCode::Char('i') => app.mode = AppMode::Insert,
+                    KeyCode::Char('s') => { app.save()?; },
                     KeyCode::Char('h') => app.move_cursor_left(),
                     KeyCode::Char('j') => app.move_cursor_down(),
                     KeyCode::Char('k') => app.move_cursor_up(),
