@@ -14,6 +14,7 @@ pub struct App {
     pub buffer: Buffer,
     pub cursor_x: usize,
     pub cursor_y: usize,
+    pub row_offset: usize,
     pub file_path: Option<PathBuf>,
 }
 
@@ -24,6 +25,7 @@ impl App {
             buffer: Buffer::new(),
             cursor_x: 0,
             cursor_y: 0,
+            row_offset: 0,
             file_path: None,
         }
     }
@@ -37,6 +39,7 @@ impl App {
             buffer,
             cursor_x: 0,
             cursor_y: 0,
+            row_offset: 0,
             file_path: Some(path),
         }
     }
@@ -105,5 +108,15 @@ impl App {
         self.cursor_y += 1;
         self.cursor_x = 0;
         self.mode = AppMode::Insert;
+    }
+
+    pub fn scroll(&mut self, terminal_height: usize) {
+        if self.cursor_y < self.row_offset {
+            self.row_offset = self.cursor_y;
+        }
+
+        if self.cursor_y >= self.row_offset + terminal_height {
+            self.row_offset = self.cursor_y - terminal_height + 1;
+        }
     }
 }

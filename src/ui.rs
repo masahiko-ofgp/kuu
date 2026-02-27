@@ -15,22 +15,28 @@ pub fn render(f: &mut Frame, app: &App) {
 
     // ------- Editor area ------
     //
-    let text: Vec<Line> = app.buffer.lines
+    let editor_area = chunks[0];
+    
+    let inner_height = editor_area.height.saturating_sub(2) as usize;
+
+    let visible_lines: Vec<Line> = app.buffer.lines
         .iter()
+        .skip(app.row_offset)
+        .take(inner_height)
         .map(|l| Line::from(l.as_str()))
         .collect();
 
-    let editor = Paragraph::new(text)
+    let editor = Paragraph::new(visible_lines)
         .block(Block::default()
             .borders(Borders::ALL)
             .title(format!(" Kuu editor - {:?}", app.mode)));
 
-    f.render_widget(editor, chunks[0]);
+    f.render_widget(editor, editor_area);
 
     // 枠線(Borders::ALL)があるので、x+1 y+1のオフセットが必要
     f.set_cursor_position(
-        (chunks[0].x + 1 + app.cursor_x as u16,
-        chunks[0].y + 1 + app.cursor_y as u16),
+        (editor_area.x + 1 + app.cursor_x as u16,
+        editor_area.y + 1 + (app.cursor_y - app.row_offset) as u16),
         );
 
 

@@ -28,6 +28,10 @@ fn main() -> Result<()> {
     let mut tui = Tui::new()?;
 
     while app.mode != AppMode::Quit {
+
+        let terminal_height = tui.terminal.size()?.height.saturating_sub(3) as usize;
+        app.scroll(terminal_height);
+
         tui.terminal.draw(|f| ui::render(f, &app))?;
 
         if let Event::Key(key) = event::read()? {
