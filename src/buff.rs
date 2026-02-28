@@ -48,14 +48,14 @@ impl Buffer {
         }
     }
 
-    pub fn insert_newline(&mut self, row: usize, col: usize) {
+    /*pub fn insert_newline(&mut self, row: usize, col: usize) {
         if let Some(line) = self.lines.get_mut(col) {
             // カーソル位置から右側を切り取る
             let next_line_content = line.split_off(row);
             // 次の行として挿入
             self.lines.insert(col + 1, next_line_content);
         }
-    }
+    }*/
 
     pub fn join_lines(&mut self, row: usize) -> Option<usize> {
         if row > 0 && row < self.lines.len() {
