@@ -20,7 +20,6 @@ use std::path::PathBuf;
 
 
 fn main() -> Result<()> {
-    println!("{:?}", dirs::config_dir());
     let config = Config::load();
 
     let args: Vec<String> = env::args().collect();
