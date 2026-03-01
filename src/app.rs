@@ -1,6 +1,15 @@
 use crate::buff::Buffer;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+use crate::config::Config;
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum KeyBindMode {
+    Vim,
+    Emacs,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
@@ -16,21 +25,15 @@ pub struct App {
     pub cursor_y: usize,
     pub row_offset: usize,
     pub file_path: Option<PathBuf>,
+    pub config: Config,
 }
 
 impl App {
     pub fn new() -> Self {
-        Self {
-            mode: AppMode::Normal,
-            buffer: Buffer::new(),
-            cursor_x: 0,
-            cursor_y: 0,
-            row_offset: 0,
-            file_path: None,
-        }
+        Self::with_config(Config::default())
     }
 
-    pub fn with_file(path: PathBuf) -> Self {
+    pub fn with_file(path: PathBuf, config: Config) -> Self {
         let buffer = Buffer::load(&path)
             .unwrap_or_else(|_| Buffer::new());
 
@@ -41,8 +44,20 @@ impl App {
             cursor_y: 0,
             row_offset: 0,
             file_path: Some(path),
+            config,
         }
     }
+     pub fn with_config(config: Config) -> Self {
+         Self {
+             mode: AppMode::Normal,
+             buffer: Buffer::new(),
+             cursor_x: 0,
+             cursor_y: 0,
+             row_offset: 0,
+             file_path: None,
+             config,
+         }
+     }
 
     pub fn save(&self) -> std::io::Result<()> {
         if let Some(path) = &self.file_path {

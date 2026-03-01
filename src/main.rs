@@ -2,9 +2,12 @@ mod app;
 mod tui;
 mod ui;
 mod buff;
+mod handler;
+mod config;
 
 use anyhow::Result;
 use app::{App, AppMode};
+use config::Config;
 use crossterm::event::{
     self,
     Event,
@@ -13,16 +16,19 @@ use crossterm::event::{
 };
 use tui::Tui;
 use std::env;
-use::std::path::PathBuf;
+use std::path::PathBuf;
 
 
 fn main() -> Result<()> {
+    println!("{:?}", dirs::config_dir());
+    let config = Config::load();
+
     let args: Vec<String> = env::args().collect();
     
     let mut app = if args.len() > 1 {
-        App::with_file(PathBuf::from(&args[1]))
+        App::with_file(PathBuf::from(&args[1]), config)
     } else {
-        App::new()
+        App::with_config(config)
     };
 
     let mut tui = Tui::new()?;
@@ -37,34 +43,8 @@ fn main() -> Result<()> {
         if let Event::Key(key) = event::read()? {
             if key.kind != KeyEventKind::Press { continue; }
 
-            match app.mode {
-                AppMode::Normal => match key.code {
-                    KeyCode::Char('q') => app.mode = AppMode::Quit,
-                    KeyCode::Char('i') => app.mode = AppMode::Insert,
-                    KeyCode::Char('s') => { app.save()?; },
-                    KeyCode::Char('h') => app.move_cursor_left(),
-                    KeyCode::Char('j') => app.move_cursor_down(),
-                    KeyCode::Char('k') => app.move_cursor_up(),
-                    KeyCode::Char('l') => app.move_cursor_right(),
-                    KeyCode::Char('o') => app.open_new_line_below(),
-                    _ => {}
-                },
-                AppMode::Insert => match key.code {
-                    KeyCode::Esc => app.mode = AppMode::Normal,
-                    KeyCode::Enter => {
-                        app.insert_newline();
-                    }
-                    KeyCode::Char(c) => {
-                        app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
-                        app.cursor_x += 1;
-                    }
-                    KeyCode::Backspace => {
-                        app.handle_backspace();
-                    }
-                    _ => {}
-                },
-                _ => {}
-            }
+            let handler = handler::get_handler(app.config.key_bind_mode);
+            handler.handle_key(key, &mut app);
         }
     }
 

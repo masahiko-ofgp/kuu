@@ -84,4 +84,20 @@ impl Buffer {
             }
         }
     }
+
+    pub fn delete_char_at(&mut self, row: usize, col: usize) {
+        if let Some(line) = self.lines.get_mut(row) {
+            if col < line.len() {
+                line.remove(col);
+            } else if row < self.lines.len() - 1 {
+                self.join_lines(row + 1);
+            }
+        }
+    }
+
+    pub fn kill_line(&mut self, row: usize, col: usize) {
+        if let Some(line) = self.lines.get_mut(row) {
+            line.truncate(col);
+        }
+    }
 }
