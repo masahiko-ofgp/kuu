@@ -11,7 +11,6 @@ use config::Config;
 use crossterm::event::{
     self,
     Event,
-    KeyCode,
     KeyEventKind,
 };
 use tui::Tui;

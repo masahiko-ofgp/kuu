@@ -31,7 +31,7 @@ impl Config {
         
         match fs::read_to_string(&config_path) {
                 Ok(content) => toml::from_str(&content)
-                    .unwrap_or_else(|e| { Self::default() }),
+                    .unwrap_or_else(|_| { Self::default() }),
                 Err(_) => Self::default(),
             }
         }

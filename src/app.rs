@@ -29,6 +29,7 @@ pub struct App {
 }
 
 impl App {
+    #[allow(unused)]
     pub fn new() -> Self {
         Self::with_config(Config::default())
     }

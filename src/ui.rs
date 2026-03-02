@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::*;
-use crate::app::{App, AppMode};
+use crate::app::App;
+use crate::app::KeyBindMode;
 
 
 pub fn render(f: &mut Frame, app: &App) {
@@ -77,16 +78,29 @@ pub fn render(f: &mut Frame, app: &App) {
 
     // ------- Status line ------
     //
-    let status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} ",
+    let vim_status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} ",
         app.mode,
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME")
         );
+    let other_status_text = format!(" ROW: {}  COL: {} | FILE: {}",
+        app.cursor_y + 1,
+        app.cursor_x,
+        app.file_path.as_ref().map(|p| p.to_str()
+            .unwrap_or("NO NAME")).unwrap_or("NO NAME")
+        );
 
-    let status_bar = Paragraph::new(status_text)
-        .style(Style::default().bg(Color::Blue).fg(Color::White));
+    if app.config.key_bind_mode == KeyBindMode::Vim {
+        let status_bar = Paragraph::new(vim_status_text)
+            .style(Style::default().bg(Color::Blue).fg(Color::White));
 
-    f.render_widget(status_bar, main_chunks[1]);
+        f.render_widget(status_bar, main_chunks[1]);
+    } else {
+        let status_bar = Paragraph::new(other_status_text)
+            .style(Style::default().bg(Color::White).fg(Color::Blue));
+
+        f.render_widget(status_bar, main_chunks[1]);
+    }
 }
