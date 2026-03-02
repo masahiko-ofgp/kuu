@@ -1,7 +1,6 @@
 use ratatui::prelude::*;
 use ratatui::widgets::*;
-use crate::app::App;
-use crate::app::KeyBindMode;
+use crate::app::{App, AppMode, KeyBindMode};
 
 
 pub fn render(f: &mut Frame, app: &App) {
@@ -9,6 +8,7 @@ pub fn render(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),
+            Constraint::Length(1),
             Constraint::Length(1),
         ])
         .split(f.area());
@@ -102,5 +102,30 @@ pub fn render(f: &mut Frame, app: &App) {
             .style(Style::default().bg(Color::White).fg(Color::Blue));
 
         f.render_widget(status_bar, main_chunks[1]);
+    }
+
+    // Command line
+    //
+    match app.mode {
+        AppMode::Command => {
+            let cmd_text = format!(":{}", app.command_input);
+            f.render_widget(
+                Paragraph::new(cmd_text).style(
+                    Style::default().fg(Color::Yellow)),
+                main_chunks[2]
+            );
+
+            f.set_cursor_position(
+                (main_chunks[2].x + (app.command_input.len() + 1) as u16,
+                 main_chunks[2].y)
+                );
+        }
+        _ => {
+            f.render_widget(Paragraph::new(""), main_chunks[2]);
+            f.set_cursor_position(
+                (inner_editor_area.x + app.cursor_x as u16,
+                 inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
+                );
+        }
     }
 }

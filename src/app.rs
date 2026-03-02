@@ -15,6 +15,7 @@ pub enum KeyBindMode {
 pub enum AppMode {
     Normal,
     Insert,
+    Command,
     Quit,
 }
 
@@ -26,6 +27,7 @@ pub struct App {
     pub row_offset: usize,
     pub file_path: Option<PathBuf>,
     pub config: Config,
+    pub command_input: String,
 }
 
 impl App {
@@ -46,6 +48,7 @@ impl App {
             row_offset: 0,
             file_path: Some(path),
             config,
+            command_input: String::new(),
         }
     }
      pub fn with_config(config: Config) -> Self {
@@ -57,6 +60,7 @@ impl App {
              row_offset: 0,
              file_path: None,
              config,
+             command_input: String::new(),
          }
      }
 
@@ -65,6 +69,28 @@ impl App {
             self.buffer.save(path)?;
         }
         Ok(())
+    }
+
+    pub fn execute_command(&mut self) {
+        let cmd = self.command_input.trim();
+        
+        match cmd {
+            "w" | "write" => {
+                let _ = self.save();
+                self.mode = AppMode::Normal;
+            },
+            "q" | "quit" => {
+                self.mode = AppMode::Quit;
+            },
+            "wq" => {
+                let _ = self.save();
+                self.mode = AppMode::Quit;
+            },
+            _ => {
+                self.mode = AppMode::Normal;
+            }
+        }
+        self.command_input.clear();
     }
 
     pub fn move_cursor_left(&mut self) {
