@@ -3,7 +3,7 @@ use ratatui::widgets::*;
 use crate::app::{App, AppMode, KeyBindMode};
 
 
-pub fn render(f: &mut Frame, app: &App) {
+pub fn render(f: &mut Frame, app: &mut App) {
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -30,7 +30,7 @@ pub fn render(f: &mut Frame, app: &App) {
     let body_area = editor_chunks[1];
 
     let editor_block = Block::default()
-        .borders(Borders::ALL)
+        .borders(Borders::TOP)
         .title(format!(" Kuu "));
 
     let inner_editor_area = editor_block.inner(body_area);
@@ -58,23 +58,57 @@ pub fn render(f: &mut Frame, app: &App) {
         f.render_widget(line_num_widget, line_num_rect);
     }
 
-    let visible_lines: Vec<Line> = app.buffer.lines
-        .iter()
+    // TODO: Must change full_text. this is heavy.
+    let full_text = app.buffer.as_full_text();
+    let highlights = app.highlighter.get_highlights(&full_text);
+    let mut lines = Vec::new();
+    let mut current_byte = 0;
+
+    for line_str in app.buffer.lines.iter() {
+        let mut spans = Vec::new();
+        let line_start_byte = current_byte;
+        let line_end_byte = line_start_byte + line_str.len();
+
+        let mut last_pos = line_start_byte;
+
+        for h in &highlights {
+            if h.start_byte < line_end_byte &&
+                h.end_byte > line_start_byte {
+                    if h.start_byte > last_pos {
+                        let start = last_pos - line_start_byte;
+                        let end = h.start_byte - line_start_byte;
+                        spans.push(Span::raw(&line_str[start..end]));
+                    }
+                    let h_start = h.start_byte.max(line_start_byte) - line_start_byte;
+                    let h_end = h.end_byte.min(line_end_byte) - line_start_byte;
+                    spans.push(Span::styled(
+                            &line_str[h_start..h_end],
+                            Style::default().fg(h.color)
+                            ));
+                    last_pos = h.end_byte.min(line_end_byte);
+                }
+        }
+        if last_pos < line_end_byte {
+            spans.push(Span::raw(&line_str[last_pos - line_start_byte..]));
+        }
+        lines.push(Line::from(spans));
+        current_byte = line_end_byte + 1;
+    }
+    let display_lines: Vec<Line> = lines
+        .into_iter()
         .skip(app.row_offset)
         .take(inner_editor_area.height as usize)
-        .map(|l| Line::from(l.as_str()))
         .collect();
 
-    let editor_widget = Paragraph::new(visible_lines)
+    let editor_widget = Paragraph::new(display_lines)
         .block(editor_block);
 
     f.render_widget(editor_widget, body_area);
 
     f.set_cursor_position(
         (inner_editor_area.x + app.cursor_x as u16,
-        inner_editor_area.y + (app.cursor_y - app.row_offset) as u16),
+         inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
         );
-
 
     // ------- Status line ------
     //
@@ -128,4 +162,6 @@ pub fn render(f: &mut Frame, app: &App) {
                 );
         }
     }
+
+
 }

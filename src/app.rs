@@ -2,6 +2,7 @@ use crate::buff::Buffer;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
+use crate::highlight::Highlighter;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -28,6 +29,7 @@ pub struct App {
     pub file_path: Option<PathBuf>,
     pub config: Config,
     pub command_input: String,
+    pub highlighter: Highlighter,
 }
 
 impl App {
@@ -49,6 +51,7 @@ impl App {
             file_path: Some(path),
             config,
             command_input: String::new(),
+            highlighter: Highlighter::new(),
         }
     }
      pub fn with_config(config: Config) -> Self {
@@ -61,6 +64,7 @@ impl App {
              file_path: None,
              config,
              command_input: String::new(),
+             highlighter: Highlighter::new(),
          }
      }
 

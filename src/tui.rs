@@ -32,8 +32,8 @@ impl Tui {
     }
 
     pub fn exit(&mut self) -> Result<()> {
-        disable_raw_mode()?;
         execute!(io::stdout(), LeaveAlternateScreen)?;
+        disable_raw_mode()?;
         self.terminal.show_cursor()?;
         Ok(())
     }

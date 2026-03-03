@@ -4,6 +4,7 @@ mod ui;
 mod buff;
 mod handler;
 mod config;
+mod highlight;
 
 use anyhow::Result;
 use app::{App, AppMode};
@@ -36,7 +37,7 @@ fn main() -> Result<()> {
         let terminal_height = tui.terminal.size()?.height.saturating_sub(3) as usize;
         app.scroll(terminal_height);
 
-        tui.terminal.draw(|f| ui::render(f, &app))?;
+        tui.terminal.draw(|f| ui::render(f, &mut app))?;
 
         if let Event::Key(key) = event::read()? {
             if key.kind != KeyEventKind::Press { continue; }

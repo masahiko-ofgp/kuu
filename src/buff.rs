@@ -100,4 +100,8 @@ impl Buffer {
             line.truncate(col);
         }
     }
+
+    pub fn as_full_text(&self) -> String {
+        self.lines.join("\n")
+    }
 }
