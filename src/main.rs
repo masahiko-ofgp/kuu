@@ -25,9 +25,14 @@ fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     
     let mut app = if args.len() > 1 {
-        App::with_file(PathBuf::from(&args[1]), config)
+        let app = App::new();
+        let mut app = app.with_file(PathBuf::from(&args[1]));
+        app.config = config;
+        app
     } else {
-        App::with_config(config)
+        let mut app = App::new();
+        app.config = config;
+        app
     };
 
     let mut tui = Tui::new()?;

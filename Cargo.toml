@@ -11,4 +11,15 @@ ratatui = "0.30.0"
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "1.0.3"
 tree-sitter = "0.26.6"
-tree-sitter-rust = "0.24.0"
+tree-sitter-rust = { version = "0.24.0", optional = true }
+tree-sitter-python = { version = "0.25.0", optional = true }
+tree-sitter-ocaml = { version = "0.24", optional = true }
+
+[features]
+default = ["lang-rust"]
+
+lang-rust = ["dep:tree-sitter-rust"]
+lang-python = ["dep:tree-sitter-python"]
+lang-ocaml = ["dep:tree-sitter-ocaml"]
+
+all-langs = ["lang-rust", "lang-python", "lang-ocaml"]

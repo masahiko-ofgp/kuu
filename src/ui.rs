@@ -112,28 +112,33 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ------- Status line ------
     //
-    let vim_status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} ",
+    let lang_name = app.highlighter.current_language_name()
+        .unwrap_or("Plain Text");
+
+    let vim_status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} | {} ",
         app.mode,
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
-            .unwrap_or("NO NAME")).unwrap_or("NO NAME")
+            .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
+        lang_name,
         );
-    let other_status_text = format!(" ROW: {}  COL: {} | FILE: {}",
+    let other_status_text = format!(" ROW: {}  COL: {} | FILE: {} | {} ",
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
-            .unwrap_or("NO NAME")).unwrap_or("NO NAME")
+            .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
+        lang_name
         );
 
     if app.config.key_bind_mode == KeyBindMode::Vim {
         let status_bar = Paragraph::new(vim_status_text)
-            .style(Style::default().bg(Color::Blue).fg(Color::White));
+            .style(Style::default().bg(Color::Cyan).fg(Color::White));
 
         f.render_widget(status_bar, main_chunks[1]);
     } else {
         let status_bar = Paragraph::new(other_status_text)
-            .style(Style::default().bg(Color::White).fg(Color::Blue));
+            .style(Style::default().bg(Color::White).fg(Color::Cyan));
 
         f.render_widget(status_bar, main_chunks[1]);
     }

@@ -3,10 +3,29 @@ use tree_sitter::{
     Query,
     QueryCursor,
     StreamingIterator,
+    Language,
 };
 use tree_sitter_rust;
 use ratatui::style::Color;
 
+
+pub struct LanguageConfig {
+    pub name: String,
+    pub language: Language,
+    pub query: Query,
+}
+
+impl LanguageConfig {
+    pub fn new(name: &str, lang: Language, query_str: &str) -> Self {
+        let query = Query::new(&lang, query_str)
+            .expect(&format!("Error loading query for {}", name));
+        Self {
+            name: name.to_string(),
+            language: lang,
+            query,
+        }
+    }
+}
 
 pub struct HighlightRange {
     pub start_byte: usize,
@@ -16,44 +35,60 @@ pub struct HighlightRange {
 
 pub struct Highlighter {
     parser: Parser,
-    query: Query,
+    current_config: Option<LanguageConfig>,
 }
 
 impl Highlighter {
     pub fn new() -> Self {
-        let mut parser = Parser::new();
+        Self {
+            parser: Parser::new(),
+            current_config: None,
+        }
+    }
 
-        let language = tree_sitter_rust::LANGUAGE.into();
-
-        parser.set_language(&language)
-            .expect("Error loading Rust grammer");
-
-        let query_result = Query::new(&language, r#"
-            ["use" "let" "fn" "if" "else" "pub" "struct" "enum" "impl" "type" "match"] @keyword
-            (line_comment) @comment
-            (string_literal) @string
-            (struct_item (type_identifier) @type)
-            (function_item (identifier) @function)
-        "#);
-
-        let query = match query_result {
-            Ok(q) => q,
-            Err(e) => {
-                panic!("Query error at row {}: {:?}", e.row, e.message);
+    pub fn set_language_by_extension(&mut self, extension: &str) {
+        let config = match extension {
+            #[cfg(feature = "lang-rust")]
+            "rs" => {
+                let lang = tree_sitter_rust::LANGUAGE.into();
+                let query = r#"
+                    ["use" "let" "fn" "if" "else" "pub" "struct" "enum" "impl" "type" "match"] @keyword
+                    (line_comment) @comment
+                    (string_literal) @string
+                    (struct_item (type_identifier) @type)
+                    (function_item (identifier) @function)
+                    "#;
+                Some(LanguageConfig::new("rust", lang, query))
             }
+            #[cfg(feature = "lang-python")]
+            "py" => {
+            }
+            #[cfg(feature = "lang-ocaml")]
+            "ml" => {
+            }
+            _ => None,
         };
-
-        Self { parser, query }
+        if let Some(cfg) = config {
+            self.parser.set_language(&cfg.language).ok();
+            self.current_config = Some(cfg);
+        } else {
+            self.current_config = None;
+        }
     }
 
     pub fn get_highlights(&mut self, text: &str) -> Vec<HighlightRange>
     {
+        let config = match &self.current_config {
+            Some(c) => c,
+            None => return Vec::new(),
+        };
+
         let tree = self.parser.parse(text, None).unwrap();
 
         let mut cursor = QueryCursor::new();
 
         let mut matches = cursor.matches(
-            &self.query,
+            &config.query,
             tree.root_node(),
             text.as_bytes()
             );
@@ -62,7 +97,7 @@ impl Highlighter {
 
         while let Some(m) = matches.next() {
             for capture in m.captures {
-                let capture_name = self.query
+                let capture_name = config.query
                     .capture_names()[capture.index as usize];
 
                 let color = match capture_name {
@@ -82,5 +117,10 @@ impl Highlighter {
             }
         }
         highlights
+    }
+
+    pub fn current_language_name(&self) -> Option<&str> {
+        self.current_config.as_ref()
+            .map(|c| c.name.as_str())
     }
 }

@@ -33,53 +33,72 @@ pub struct App {
 }
 
 impl App {
-    #[allow(unused)]
     pub fn new() -> Self {
-        Self::with_config(Config::default())
-    }
-
-    pub fn with_file(path: PathBuf, config: Config) -> Self {
-        let buffer = Buffer::load(&path)
-            .unwrap_or_else(|_| Buffer::new());
-
         Self {
             mode: AppMode::Normal,
-            buffer,
+            buffer: Buffer::new(),
             cursor_x: 0,
             cursor_y: 0,
             row_offset: 0,
-            file_path: Some(path),
-            config,
+            file_path: None,
+            config: Config::default(),
             command_input: String::new(),
             highlighter: Highlighter::new(),
         }
     }
-     pub fn with_config(config: Config) -> Self {
-         Self {
-             mode: AppMode::Normal,
-             buffer: Buffer::new(),
-             cursor_x: 0,
-             cursor_y: 0,
-             row_offset: 0,
-             file_path: None,
-             config,
-             command_input: String::new(),
-             highlighter: Highlighter::new(),
-         }
-     }
 
-    pub fn save(&self) -> std::io::Result<()> {
+    pub fn with_file(mut self, path: PathBuf) -> Self {
+        match Buffer::load(&path) {
+            Ok(buffer) => {
+                self.buffer = buffer;
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    self.highlighter.set_language_by_extension(ext);
+                }
+                self.file_path = Some(path);
+            }
+            Err(_) => {
+                self.file_path = Some(path);
+            }
+        }
+        self
+    }
+
+    pub fn save(&mut self) -> std::io::Result<()> {
         if let Some(path) = &self.file_path {
             self.buffer.save(path)?;
+        
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                self.highlighter.set_language_by_extension(ext);
+            }
         }
         Ok(())
     }
 
+    pub fn open(&mut self, path: PathBuf) {
+        if let Ok(buffer) = Buffer::load(&path) {
+            self.buffer = buffer;
+
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                self.highlighter.set_language_by_extension(ext);
+            }
+
+            self.file_path = Some(path);
+        }
+    }
+
     pub fn execute_command(&mut self) {
-        let cmd = self.command_input.trim();
+        let cmd = self.command_input.trim().to_string();
+        let parts: Vec<&str> = cmd.split_whitespace().collect();
+        if parts.is_empty() {
+            self.mode = AppMode::Normal;
+            return;
+        }
         
-        match cmd {
+        match parts[0] {
             "w" | "write" => {
+                if parts.len() > 1 {
+                    self.file_path = Some(PathBuf::from(parts[1]));
+                }
                 let _ = self.save();
                 self.mode = AppMode::Normal;
             },
@@ -89,6 +108,12 @@ impl App {
             "wq" => {
                 let _ = self.save();
                 self.mode = AppMode::Quit;
+            },
+            "e" | "edit" => {
+                if parts.len() > 1 {
+                    let _ = self.open(PathBuf::from(parts[1]));
+                }
+                self.mode = AppMode::Normal;
             },
             _ => {
                 self.mode = AppMode::Normal;
