@@ -51,20 +51,20 @@ impl Highlighter {
             #[cfg(feature = "lang-rust")]
             "rs" => {
                 let lang = tree_sitter_rust::LANGUAGE.into();
-                let query = r#"
-                    ["use" "let" "fn" "if" "else" "pub" "struct" "enum" "impl" "type" "match"] @keyword
-                    (line_comment) @comment
-                    (string_literal) @string
-                    (struct_item (type_identifier) @type)
-                    (function_item (identifier) @function)
-                    "#;
+                let query = include_str!("../queries/rust/highlights.scm");
                 Some(LanguageConfig::new("rust", lang, query))
             }
             #[cfg(feature = "lang-python")]
             "py" => {
+                let lang = tree_sitter_python::LANGUAGE.into();
+                let query = include_str!("../queries/python/highlights.scm");
+                Some(LanguageConfig::new("python", lang, query))
             }
             #[cfg(feature = "lang-ocaml")]
             "ml" => {
+                let lang = tree_sitter_ocaml::LANGUAGE_OCAML.into();
+                let query = include_str!("../queries/ocaml/highlights.scm");
+                Some(LanguageConfig::new("ocaml", lang, query))
             }
             _ => None,
         };
