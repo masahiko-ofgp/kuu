@@ -101,7 +101,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .collect();
 
     let editor_widget = Paragraph::new(display_lines)
-        .block(editor_block);
+        .block(editor_block)
+        .wrap( Wrap { trim: false });
 
     f.render_widget(editor_widget, body_area);
 

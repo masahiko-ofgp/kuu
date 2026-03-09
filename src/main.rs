@@ -14,15 +14,12 @@ use crossterm::event::{
     Event,
     KeyEventKind,
 };
-use tui::{Tui, install_panic_hook, setup_ctrlc};
+use tui::Tui;
 use std::env;
 use std::path::PathBuf;
 
 
 fn main() -> Result<()> {
-    install_panic_hook();
-    setup_ctrlc();
-
     let config = Config::load();
 
     let args: Vec<String> = env::args().collect();

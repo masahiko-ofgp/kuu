@@ -1,33 +1,29 @@
 use anyhow::Result;
 use crossterm::{
-    execute,
+    ExecutableCommand,
     terminal::{
-        disable_raw_mode,
         enable_raw_mode,
         EnterAlternateScreen,
-        LeaveAlternateScreen,
     },
 };
-use ratatui::prelude::*;
+use ratatui::Terminal;
+use ratatui::backend::CrosstermBackend;
 use std::io::{self, Write, Stdout};
-use std::panic;
 
 
-pub fn install_panic_hook() {
-    let default_hook = panic::take_hook();
+fn set_panic_hook() {
+    let hook = std::panic::take_hook();
 
-    panic::set_hook(Box::new(move |info| {
-        let _ = disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = ratatui::restore();
 
-        default_hook(info);
+        hook(info);
     }));
 }
 
-pub fn setup_ctrlc() {
+fn setup_ctrlc() {
     ctrlc::set_handler(move || {
-        let _ = disable_raw_mode();
-        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+        let _ = ratatui::restore();
         std::process::exit(0);
     }).expect("Error setting Ctrl-C handler");
 }
@@ -38,24 +34,24 @@ pub struct Tui {
 
 impl Tui {
     pub fn new() -> Result<Self> {
+        let backend = CrosstermBackend::new(io::stdout());
+
+        let mut terminal = Terminal::new(backend)?;
+
+        io::stdout().execute(EnterAlternateScreen)?;
         enable_raw_mode()?;
 
-        let mut stdout = io::stdout();
+        set_panic_hook();
+        setup_ctrlc();
 
-        execute!(stdout, EnterAlternateScreen)?;
-
-        let backend = CrosstermBackend::new(stdout);
-
-        let terminal = Terminal::new(backend)?;
+        terminal.clear()?;
 
         Ok(Self { terminal })
     }
 
     pub fn exit(&mut self) -> Result<()> {
-        execute!(io::stdout(), LeaveAlternateScreen)?;
         io::stdout().flush()?;
-        disable_raw_mode()?;
-        self.terminal.show_cursor()?;
+        ratatui::try_restore()?;
         Ok(())
     }
 }
