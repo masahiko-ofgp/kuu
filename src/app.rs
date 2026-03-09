@@ -164,12 +164,13 @@ impl App {
 
     pub fn handle_backspace(&mut self) {
         if self.cursor_x > 0 {
-            self.buffer.delete_char(self.cursor_y, self.cursor_x);
+            self.buffer.delete_char(self.cursor_y, self.cursor_x - 1);
             self.cursor_x -= 1;
         } else if self.cursor_y > 0 {
-            if let Some(new_x) = self.buffer.join_lines(self.cursor_y) {
-                self.cursor_y -= 1;
-                self.cursor_x = new_x;
+            let prev_y = self.cursor_y - 1;
+            if let Some(join_point) = self.buffer.join_lines(prev_y) {
+                self.cursor_y = prev_y;
+                self.cursor_x = join_point;
             }
         }
     }
