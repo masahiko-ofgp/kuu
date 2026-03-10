@@ -129,7 +129,6 @@ impl App {
             }
         }
         self.command_input.clear();
-        self.status_message = None;
     }
 
     pub fn move_cursor_left(&mut self) {
@@ -206,6 +205,13 @@ impl App {
 
         if self.cursor_y >= self.row_offset + terminal_height {
             self.row_offset = self.cursor_y - terminal_height + 1;
+        }
+    }
+
+    pub fn show_status_message(&self) -> String {
+        match &self.status_message {
+            Some(s) => s.to_string(),
+            None => "NO MESSAGE".to_string(),
         }
     }
 }

@@ -115,10 +115,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let lang_name = app.highlighter.current_language_name()
         .unwrap_or("Plain Text");
 
-    let status_message = match &app.status_message {
-        Some(s) => s,
-        None => &format!("NO MESSAGE"),
-    };
     let vim_status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} | {} | {}",
         app.mode,
         app.cursor_y + 1,
@@ -126,7 +122,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
-        status_message,
+        app.show_status_message(),
         );
     let other_status_text = format!(" ROW: {}  COL: {} | FILE: {} | {} | {}",
         app.cursor_y + 1,
@@ -134,7 +130,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
-        status_message,
+        app.show_status_message(),
         );
 
     if app.config.key_bind_mode == KeyBindMode::Vim {
