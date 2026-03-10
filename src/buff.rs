@@ -39,16 +39,17 @@ impl Buffer {
         })
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+    pub fn save<P: AsRef<Path>>(&mut self, path: P) -> io::Result<()> {
+        let text = self.as_full_text();
+
         let mut file = File::create(path)?;
 
-        for (i, line) in self.lines.iter().enumerate() {
-            file.write_all(line.as_bytes())?;
+        file.write_all(text.as_bytes())?;
 
-            if i < self.lines.len() - 1 {
-                file.write_all(b"\n")?;
-            }
-        }
+        file.write_all(b"\n")?;
+
+        self.is_dirty = false;
+
         Ok(())
     }
 
@@ -64,17 +65,17 @@ impl Buffer {
         }
     }
 
-    pub fn insert_newline(&mut self, y: usize, x: usize) {
-        let line = &mut self.lines[y];
-        let new_line = line.split_off(x);
-        self.lines.insert(y + 1, new_line);
+    pub fn insert_newline(&mut self, row: usize, col: usize) {
+        let line = &mut self.lines[row];
+        let new_line = line.split_off(col);
+        self.lines.insert(row + 1, new_line);
         self.mark_dirty();
     }
 
-    pub fn join_lines(&mut self, y: usize) -> Option<usize> {
-        if y + 1 < self.lines.len() {
-            let next_line = self.lines.remove(y + 1);
-            let current_line = self.lines.get_mut(y)?;
+    pub fn join_lines(&mut self, row: usize) -> Option<usize> {
+        if row + 1 < self.lines.len() {
+            let next_line = self.lines.remove(row + 1);
+            let current_line = self.lines.get_mut(row)?;
             let join_point = current_line.len();
             current_line.push_str(&next_line);
             self.mark_dirty();
@@ -92,6 +93,11 @@ impl Buffer {
             self.lines.push(String::new());
             self.mark_dirty();
         }
+    }
+    
+    pub fn insert_line_above(&mut self, row: usize) {
+        self.lines.insert(row, String::new());
+        self.mark_dirty();
     }
 
     pub fn delete_char(&mut self, row: usize, col: usize) {

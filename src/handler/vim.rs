@@ -25,6 +25,7 @@ impl VimHandler {
             KeyCode::Char('k') => app.move_cursor_up(),
             KeyCode::Char('l') => app.move_cursor_right(),
             KeyCode::Char('o') => app.open_new_line_below(),
+            KeyCode::Char('O') => app.open_new_line_above(),
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();

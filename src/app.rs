@@ -30,6 +30,7 @@ pub struct App {
     pub config: Config,
     pub command_input: String,
     pub highlighter: Highlighter,
+    pub status_message: Option<String>,
 }
 
 impl App {
@@ -44,6 +45,7 @@ impl App {
             config: Config::default(),
             command_input: String::new(),
             highlighter: Highlighter::new(),
+            status_message: None,
         }
     }
 
@@ -65,7 +67,14 @@ impl App {
 
     pub fn save(&mut self) -> std::io::Result<()> {
         if let Some(path) = &self.file_path {
-            self.buffer.save(path)?;
+            match self.buffer.save(path) {
+                Ok(_) => {
+                    self.status_message = Some(format!("Written to {:?}", path));
+                }
+                Err(e) => {
+                    self.status_message = Some(format!("Error saving: {}", e));
+                }
+            }
         
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 self.highlighter.set_language_by_extension(ext);
@@ -120,6 +129,7 @@ impl App {
             }
         }
         self.command_input.clear();
+        self.status_message = None;
     }
 
     pub fn move_cursor_left(&mut self) {
@@ -157,7 +167,8 @@ impl App {
     }
 
     pub fn insert_newline(&mut self) {
-        self.buffer.insert_empty_line(self.cursor_y);
+        //self.buffer.insert_empty_line(self.cursor_y);
+        self.buffer.insert_newline(self.cursor_y, self.cursor_x);
         self.cursor_y += 1;
         self.cursor_x = 0;
     }
@@ -178,6 +189,12 @@ impl App {
     pub fn open_new_line_below(&mut self) {
         self.buffer.insert_empty_line(self.cursor_y);
         self.cursor_y += 1;
+        self.cursor_x = 0;
+        self.mode = AppMode::Insert;
+    }
+
+    pub fn open_new_line_above(&mut self) {
+        self.buffer.insert_line_above(self.cursor_y);
         self.cursor_x = 0;
         self.mode = AppMode::Insert;
     }
