@@ -115,7 +115,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let lang_name = app.highlighter.current_language_name()
         .unwrap_or("Plain Text");
 
-    let vim_status_text = format!(" [{:?}] | ROW: {}  COL: {} | FILE: {} | {} | {}",
+    let vim_status_text = format!("[{:?}]|ROW:{}COL:{}|FILE: {}|{}|{}",
         app.mode,
         app.cursor_y + 1,
         app.cursor_x,
@@ -124,7 +124,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         lang_name,
         app.show_status_message(),
         );
-    let other_status_text = format!(" ROW: {}  COL: {} | FILE: {} | {} | {}",
+    let other_status_text = format!("ROW:{}COL:{}|FILE:{}|{}|{}",
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
