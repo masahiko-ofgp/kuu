@@ -31,6 +31,7 @@ pub struct App {
     pub command_input: String,
     pub highlighter: Highlighter,
     pub status_message: Option<String>,
+    pub pending_cmd: Option<char>,
 }
 
 impl App {
@@ -46,6 +47,7 @@ impl App {
             command_input: String::new(),
             highlighter: Highlighter::new(),
             status_message: None,
+            pending_cmd: None,
         }
     }
 
@@ -95,42 +97,6 @@ impl App {
         }
     }
 
-    pub fn execute_command(&mut self) {
-        let cmd = self.command_input.trim().to_string();
-        let parts: Vec<&str> = cmd.split_whitespace().collect();
-        if parts.is_empty() {
-            self.mode = AppMode::Normal;
-            return;
-        }
-        
-        match parts[0] {
-            "w" | "write" => {
-                if parts.len() > 1 {
-                    self.file_path = Some(PathBuf::from(parts[1]));
-                }
-                let _ = self.save();
-                self.mode = AppMode::Normal;
-            },
-            "q" | "quit" => {
-                self.mode = AppMode::Quit;
-            },
-            "wq" => {
-                let _ = self.save();
-                self.mode = AppMode::Quit;
-            },
-            "e" | "edit" => {
-                if parts.len() > 1 {
-                    let _ = self.open(PathBuf::from(parts[1]));
-                }
-                self.mode = AppMode::Normal;
-            },
-            _ => {
-                self.mode = AppMode::Normal;
-            }
-        }
-        self.command_input.clear();
-    }
-
     pub fn move_cursor_left(&mut self) {
         if self.cursor_x > 0 {
             self.cursor_x -= 1;
@@ -166,7 +132,6 @@ impl App {
     }
 
     pub fn insert_newline(&mut self) {
-        //self.buffer.insert_empty_line(self.cursor_y);
         self.buffer.insert_newline(self.cursor_y, self.cursor_x);
         self.cursor_y += 1;
         self.cursor_x = 0;

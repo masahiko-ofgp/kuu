@@ -126,6 +126,16 @@ impl Buffer {
         }
     }
 
+    pub fn delete_line(&mut self, y: usize) -> usize {
+        if self.lines.len() > 1 {
+            self.lines.remove(y);
+        } else {
+            self.lines[0].clear();
+        }
+        self.mark_dirty();
+        self.lines.len()
+    }
+
     pub fn as_full_text(&mut self) -> &str {
         if self.is_dirty || self.full_text_cache.is_none() {
             self.full_text_cache = Some(self.lines.join("\n"));
