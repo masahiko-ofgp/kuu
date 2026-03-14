@@ -31,7 +31,7 @@ impl VimHandler {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
             }
-            KeyCode::Char('d') => {
+            /*KeyCode::Char('d') => {
                 match app.pending_cmd {
                     Some('d') => {
                         if let KeyCode::Char('d') = key.code {
@@ -57,9 +57,34 @@ impl VimHandler {
                         app.pending_cmd = Some('d');
                     }
                 }
-            }
+            }*/
             KeyCode::Char('D') => {
                 app.buffer.kill_line(app.cursor_y, app.cursor_x);
+            }
+            KeyCode::Char('p') => {
+                app.put_after();
+                app.pending_cmd = None;
+            }
+            KeyCode::Char('P') => {
+                app.put_before();
+                app.pending_cmd = None;
+            }
+            KeyCode::Char(c) => {
+                match app.pending_cmd {
+                    Some(prev_char) => {
+                        match (prev_char, c) {
+                            ('y', 'y') => app.yank_current_line(),
+                            ('d', 'd') => app.delete_current_line(),
+                            _ => {}
+                        }
+                        app.pending_cmd = None;
+                    }
+                    None => {
+                        if c == 'y' || c == 'd' {
+                            app.pending_cmd = Some(c);
+                        }
+                    }
+                }
             }
             _ => {}
         }

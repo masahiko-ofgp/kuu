@@ -32,6 +32,7 @@ pub struct App {
     pub highlighter: Highlighter,
     pub status_message: Option<String>,
     pub pending_cmd: Option<char>,
+    pub yank_register: Option<String>,
 }
 
 impl App {
@@ -48,6 +49,7 @@ impl App {
             highlighter: Highlighter::new(),
             status_message: None,
             pending_cmd: None,
+            yank_register: None,
         }
     }
 
@@ -163,6 +165,40 @@ impl App {
         self.mode = AppMode::Insert;
     }
 
+    pub fn yank_current_line(&mut self) {
+        if let Some(line) = self.buffer.get_line(self.cursor_y) {
+            self.yank_register = Some(line);
+            self.status_message = Some("Yanked 1 line".to_string());
+        }
+    }
+
+    pub fn put_after(&mut self) {
+        if let Some(text) = &self.yank_register {
+            self.buffer.insert_line(self.cursor_y, text.clone());
+            self.cursor_y += 1;
+            self.cursor_x = 0;
+            self.status_message = Some("Pasted".to_string());
+        }
+    }
+
+    pub fn put_before(&mut self) {
+        if let Some(text) = &self.yank_register {
+            self.buffer.insert_line_at(self.cursor_y, text.clone());
+            self.cursor_x = 0;
+            self.status_message = Some("Pasted above".to_string());
+        }
+    }
+
+    pub fn delete_current_line(&mut self) {
+        if let Some(line) = self.buffer.get_line(self.cursor_y) {
+            self.yank_register = Some(line);
+        }
+        let new_len = self.buffer.delete_line(self.cursor_y);
+        if self.cursor_y >= new_len && self.cursor_y > 0 {
+            self.cursor_y = new_len - 1;
+        }
+        self.snap_cursor_to_line_end();
+    }
     pub fn scroll(&mut self, terminal_height: usize) {
         if self.cursor_y < self.row_offset {
             self.row_offset = self.cursor_y;

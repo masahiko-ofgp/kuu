@@ -150,6 +150,28 @@ impl Buffer {
         self.lines.len()
     }
 
+    pub fn get_line(&self, row: usize) -> Option<String> {
+        self.lines.get(row).cloned()
+    }
+
+    pub fn insert_line(&mut self, row: usize, text: String) {
+        if row + 1 >= self.lines.len() {
+            self.lines.push(text);
+        } else {
+            self.lines.insert(row + 1, text);
+        }
+        self.mark_dirty();
+    }
+
+    pub fn insert_line_at(&mut self, row: usize, text: String) {
+        if row < self.lines.len() {
+            self.lines.insert(row, text);
+        } else {
+            self.lines.push(text);
+        }
+        self.mark_dirty();
+    }
+
     pub fn as_full_text(&mut self) -> &str {
         if self.is_dirty || self.full_text_cache.is_none() {
             self.full_text_cache = Some(self.lines.join("\n"));
