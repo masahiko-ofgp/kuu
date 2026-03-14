@@ -36,10 +36,10 @@ impl Tui {
     pub fn new() -> Result<Self> {
         let backend = CrosstermBackend::new(io::stdout());
 
-        let mut terminal = Terminal::new(backend)?;
-
         io::stdout().execute(EnterAlternateScreen)?;
         enable_raw_mode()?;
+
+        let mut terminal = Terminal::new(backend)?;
 
         set_panic_hook();
         setup_ctrlc();

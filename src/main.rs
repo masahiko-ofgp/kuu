@@ -37,21 +37,23 @@ fn main() -> Result<()> {
 
     let mut tui = Tui::new()?;
 
-    while app.mode != AppMode::Quit {
+    let result = (|| -> Result<()> {
+        while app.mode != AppMode::Quit {
+            let terminal_height = tui.terminal.size()?.height.saturating_sub(3) as usize;
+            app.scroll(terminal_height);
 
-        let terminal_height = tui.terminal.size()?.height.saturating_sub(3) as usize;
-        app.scroll(terminal_height);
+            tui.terminal.draw(|f| ui::render(f, &mut app))?;
 
-        tui.terminal.draw(|f| ui::render(f, &mut app))?;
+            if let Event::Key(key) = event::read()? {
+                if key.kind != KeyEventKind::Press { continue; }
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind != KeyEventKind::Press { continue; }
-
-            let handler = handler::get_handler(app.config.key_bind_mode);
-            handler.handle_key(key, &mut app);
+                let handler = handler::get_handler(app.config.key_bind_mode);
+                handler.handle_key(key, &mut app);
+            }
         }
-    }
+        Ok(())
+    })();
 
     tui.exit()?;
-    Ok(())
+    result
 }
