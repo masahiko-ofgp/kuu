@@ -104,8 +104,8 @@ impl App {
     }
 
     pub fn move_cursor_right(&mut self) {
-        let line_len = self.buffer.lines[self.cursor_y].len();
-        if self.cursor_x < line_len {
+        let char_count = self.buffer.lines[self.cursor_y].chars().count();
+        if self.cursor_x < char_count {
             self.cursor_x += 1;
         }
     }
@@ -125,9 +125,9 @@ impl App {
     }
 
     pub fn snap_cursor_to_line_end(&mut self) {
-        let line_len = self.buffer.lines[self.cursor_y].len();
-        if self.cursor_x > line_len {
-            self.cursor_x = line_len;
+        let char_count = self.buffer.lines[self.cursor_y].chars().count();
+        if self.cursor_x > char_count {
+            self.cursor_x = char_count;
         }
     }
 

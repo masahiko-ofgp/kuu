@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 use crate::app::{App, AppMode, KeyBindMode};
+use unicode_width::UnicodeWidthStr;
 
 
 pub fn render(f: &mut Frame, app: &mut App) {
@@ -105,10 +106,17 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     f.render_widget(editor_widget, body_area);
 
-    f.set_cursor_position(
-        (inner_editor_area.x + app.cursor_x as u16,
-         inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
-        );
+    if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
+        let cursor_x_display = current_line
+            .chars()
+            .take(app.cursor_x)
+            .collect::<String>()
+            .width();
+        f.set_cursor_position(
+            (inner_editor_area.x + cursor_x_display as u16,
+             inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
+            );
+    }
 
     // ------- Status line ------
     //
@@ -150,6 +158,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     match app.mode {
         AppMode::Command => {
             let cmd_text = format!(":{}", app.command_input);
+            let cmd_display_width = UnicodeWidthStr::width(app.command_input.as_str());
             f.render_widget(
                 Paragraph::new(cmd_text).style(
                     Style::default().fg(Color::Yellow)),
@@ -157,16 +166,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
             );
 
             f.set_cursor_position(
-                (main_chunks[2].x + (app.command_input.len() + 1) as u16,
+                (main_chunks[2].x + (cmd_display_width + 1) as u16,
                  main_chunks[2].y)
                 );
         }
         _ => {
             f.render_widget(Paragraph::new(""), main_chunks[2]);
-            f.set_cursor_position(
-                (inner_editor_area.x + app.cursor_x as u16,
-                 inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
-                );
         }
     }
 

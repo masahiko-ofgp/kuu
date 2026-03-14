@@ -59,27 +59,32 @@ impl Buffer {
     }
 
     pub fn insert_char(&mut self, row: usize, col: usize, ch: char) {
+        let byte_idx = self.char_to_byte_idx(row, col);
+
         if let Some(line) = self.lines.get_mut(row) {
-            line.insert(col, ch);
+            line.insert(byte_idx, ch);
             self.mark_dirty();
         }
     }
 
     pub fn insert_newline(&mut self, row: usize, col: usize) {
-        let line = &mut self.lines[row];
-        let new_line = line.split_off(col);
-        self.lines.insert(row + 1, new_line);
-        self.mark_dirty();
+        let byte_idx = self.char_to_byte_idx(row, col);
+
+        if let Some(line) = self.lines.get_mut(row) {
+            let new_line = line.split_off(byte_idx);
+            self.lines.insert(row + 1, new_line);
+            self.mark_dirty();
+        }
     }
 
     pub fn join_lines(&mut self, row: usize) -> Option<usize> {
         if row + 1 < self.lines.len() {
             let next_line = self.lines.remove(row + 1);
             let current_line = self.lines.get_mut(row)?;
-            let join_point = current_line.len();
+            let joint_point = current_line.chars().count();
             current_line.push_str(&next_line);
             self.mark_dirty();
-            Some(join_point)
+            Some(joint_point)
         } else {
             None
         }
@@ -101,27 +106,36 @@ impl Buffer {
     }
 
     pub fn delete_char(&mut self, row: usize, col: usize) {
-        if let Some(line) = self.lines.get_mut(row) {
-            line.remove(col);
-            self.mark_dirty();
-        }
-    }
+        let byte_idx = self.char_to_byte_idx(row, col);
 
-    pub fn delete_char_at(&mut self, row: usize, col: usize) {
         if let Some(line) = self.lines.get_mut(row) {
-            if col < line.len() {
-                line.remove(col);
-                self.mark_dirty();
-            } else if row < self.lines.len() - 1 {
-                self.join_lines(row + 1);
+            if byte_idx < line.len() {
+                line.remove(byte_idx);
                 self.mark_dirty();
             }
         }
     }
 
-    pub fn kill_line(&mut self, row: usize, col: usize) {
+    pub fn delete_char_at(&mut self, row: usize, col: usize) {
         if let Some(line) = self.lines.get_mut(row) {
-            line.truncate(col);
+            let char_count = line.chars().count();
+
+            if col < char_count {
+                if let Some((byte_idx, _)) = line.char_indices().nth(col) {
+                    line.remove(byte_idx);
+                    self.mark_dirty();
+                }
+            } else if row < self.lines.len() - 1 {
+                self.join_lines(row);
+            }
+        }
+    }
+
+    pub fn kill_line(&mut self, row: usize, col: usize) {
+        let byte_idx = self.char_to_byte_idx(row, col);
+
+        if let Some(line) = self.lines.get_mut(row) {
+            line.truncate(byte_idx);
             self.mark_dirty();
         }
     }
@@ -142,5 +156,16 @@ impl Buffer {
             self.is_dirty = false;
         }
         self.full_text_cache.as_ref().unwrap()
+    }
+
+    fn char_to_byte_idx(&self, y: usize, char_x: usize) -> usize {
+        if let Some(line) = self.lines.get(y) {
+            line.char_indices()
+                .nth(char_x)
+                .map(|(idx, _)| idx)
+                .unwrap_or_else(|| line.len())
+        } else {
+            0
+        }
     }
 }
