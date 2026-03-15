@@ -15,8 +15,20 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .split(f.area());
 
 
-    // ------- Editor area ------
+    // ------- Editor + Terminal area ------
     //
+    let content_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(if app.show_terminal { 70 } else { 100 }),
+            Constraint::Percentage(if app.show_terminal { 70 } else { 0 }),
+        ])
+        .split(main_chunks[0]);
+
+    let editor_area = content_chunks[0];
+    let terminal_area = content_chunks[1];
+
+    // ---- Editor area ----
     let line_num_width = if app.config.show_line_numbers {4} else {0};
     
     let editor_chunks = Layout::default()
@@ -25,7 +37,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             Constraint::Length(line_num_width),
             Constraint::Min(0),
         ])
-        .split(main_chunks[0]);
+        .split(editor_area);
 
     let line_num_area = editor_chunks[0];
     let body_area = editor_chunks[1];
@@ -61,7 +73,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let full_text = app.buffer.as_full_text();
     let highlights = app.highlighter.get_highlights(&full_text);
-    let mut lines = Vec::new();
+    let mut all_lines = Vec::new();
     let mut current_byte = 0;
 
     for line_str in app.buffer.lines.iter() {
@@ -91,10 +103,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
         if last_pos < line_end_byte {
             spans.push(Span::raw(&line_str[last_pos - line_start_byte..]));
         }
-        lines.push(Line::from(spans));
+        all_lines.push(Line::from(spans));
         current_byte = line_end_byte + 1;
     }
-    let display_lines: Vec<Line> = lines
+    let display_lines: Vec<Line> = all_lines
         .into_iter()
         .skip(app.row_offset)
         .take(inner_editor_area.height as usize)
@@ -106,7 +118,25 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     f.render_widget(editor_widget, body_area);
 
-    if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
+    // --- Terminal area ----
+    if app.show_terminal {
+        let terminal_lines: Vec<ListItem> = app.terminal_output
+            .iter()
+            .map(|s| ListItem::new(Span::raw(s)))
+            .collect();
+
+        let terminal_widget = List::new(terminal_lines)
+            .block(Block::default()
+                .borders(Borders::ALL)
+                .title(" Terminal Output ( :term to toggle )"))
+            .style(Style::default()
+                .bg(Color::Reset)
+                .fg(Color::Gray));
+
+        f.render_widget(terminal_widget, terminal_area);
+    }
+
+    /*if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
         let cursor_x_display = current_line
             .chars()
             .take(app.cursor_x)
@@ -116,7 +146,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             (inner_editor_area.x + cursor_x_display as u16,
              inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
             );
-    }
+    }*/
 
     // ------- Status line ------
     //
@@ -172,6 +202,18 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }
         _ => {
             f.render_widget(Paragraph::new(""), main_chunks[2]);
+            if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
+                let cursor_x_display = current_line
+                    .chars()
+                    .take(app.cursor_x)
+                    .collect::<String>()
+                    .width();
+
+                f.set_cursor_position(
+                    (inner_editor_area.x + cursor_x_display as u16,
+                     inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
+                    );
+            }
         }
     }
 

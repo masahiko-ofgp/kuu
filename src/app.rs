@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::highlight::Highlighter;
+use std::process::Command;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -33,6 +34,8 @@ pub struct App {
     pub status_message: Option<String>,
     pub pending_cmd: Option<char>,
     pub yank_register: Option<String>,
+    pub terminal_output: Vec<String>,
+    pub show_terminal: bool,
 }
 
 impl App {
@@ -50,6 +53,8 @@ impl App {
             status_message: None,
             pending_cmd: None,
             yank_register: None,
+            terminal_output: Vec::new(),
+            show_terminal: false,
         }
     }
 
@@ -97,6 +102,35 @@ impl App {
 
             self.file_path = Some(path);
         }
+    }
+
+    pub fn run_command(&mut self, cmd: &str) {
+        self.terminal_output.clear();
+        self.terminal_output.push(format!("$ {}", cmd));
+
+        let output = if cfg!(target_os = "windows") {
+            Command::new("cmd").args(["/C", cmd]).output()
+        } else {
+            Command::new("sh").args(["-c", cmd]).output()
+        };
+
+        match output {
+            Ok(out) => {
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                let stderr = String::from_utf8_lossy(&out.stderr);
+
+                for line in stdout.lines() {
+                    self.terminal_output.push(line.to_string());
+                }
+                for line in stderr.lines() {
+                    self.terminal_output.push(format!("[STDERR] {}", line));
+                }
+            }
+            Err(e) => {
+                self.terminal_output.push(format!("Error: {}", e));
+            }
+        }
+        self.show_terminal = true;
     }
 
     pub fn move_cursor_left(&mut self) {

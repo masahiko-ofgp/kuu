@@ -139,6 +139,17 @@ impl VimHandler {
                             app.mode = AppMode::Normal;
                         }
                     },
+                    "run" => {
+                        if parts.len() > 1 {
+                            let shell_cmd = parts[1..].join(" ");
+                            app.run_command(&shell_cmd);
+                        }
+                        app.mode = AppMode::Normal;
+                    }
+                    "term" | "terminal" => {
+                        app.show_terminal = !app.show_terminal;
+                        app.mode = AppMode::Normal;
+                    }
                     _ => {
                         app.mode = AppMode::Normal;
                     }
