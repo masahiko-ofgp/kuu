@@ -14,8 +14,63 @@ pub fn render(f: &mut Frame, app: &mut App) {
         ])
         .split(f.area());
 
-    // ---- Editor area ---
-    let editor_area = main_chunks[0];
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(if app.show_file_tree { 20 } else { 0 }),
+            Constraint::Min(0),
+        ])
+        .split(main_chunks[0]);
+
+    let tree_area = content_chunks[0];
+    let editor_area = content_chunks[1];
+
+    // --- File tree ---
+    if app.show_file_tree {
+        let items: Vec<ListItem> = app.file_list
+            .iter()
+            .enumerate()
+            .map(|(i, path)| {
+                let name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("?");
+                let is_dir = path.is_dir();
+                // TODO: icon
+                let icon = if is_dir {"\u{f413}"} else {"\u{ea7b}"};
+
+                let style = if i == app.file_list_selected {
+                    Style::default()
+                        .bg(Color::Blue)
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD)
+                } else if app.mode == AppMode::FileTree {
+                    Style::default()
+                        .fg(Color::White)
+                } else {
+                    Style::default()
+                        .fg(Color::DarkGray)
+                };
+
+                ListItem::new(format!("{} {}", icon, name))
+                    .style(style)
+            })
+            .collect();
+
+        let tree_block = Block::default()
+            .borders(Borders::ALL)
+            .title(" Explorer ")
+            .border_style(if app.mode == AppMode::FileTree {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            });
+
+        let tree_list = List::new(items).block(tree_block);
+        f.render_widget(tree_list, tree_area);
+
+    }
+
+    // --- Editor area ---
 
     let line_num_width = if app.config.show_line_numbers {4} else {0};
     
@@ -144,6 +199,19 @@ pub fn render(f: &mut Frame, app: &mut App) {
         f.render_widget(status_bar, main_chunks[1]);
     }
 
+    if app.mode != AppMode::FileTree {
+        if let Some(line) = app.buffer.lines.get(app.cursor_y) {
+            let cx = line.chars()
+                .take(app.cursor_x)
+                .collect::<String>()
+                .width();
+
+            f.set_cursor_position(Position {
+                x: inner_editor_area.x + cx as u16,
+                y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,
+            });
+        }
+    }
     // Command line
     //
     match app.mode {

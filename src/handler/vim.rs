@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crate::app::{App, AppMode};
 use super::KeyHandler;
 use std::path::{PathBuf};
@@ -12,6 +12,7 @@ impl KeyHandler for VimHandler {
             AppMode::Normal => self.handle_normal(key, app),
             AppMode::Insert => self.handle_insert(key, app),
             AppMode::Command => self.handle_command(key, app),
+            AppMode::FileTree => self.handle_file_tree(key, app),
             _ => {}
         }
     }
@@ -30,6 +31,11 @@ impl VimHandler {
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
+            }
+            KeyCode::Char('t') => {
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    app.mode = AppMode::FileTree;
+                }
             }
             KeyCode::Char('D') => {
                 app.buffer.kill_line(app.cursor_y, app.cursor_x);
@@ -83,7 +89,6 @@ impl VimHandler {
                 app.command_input.clear();
             }
             KeyCode::Enter => {
-                //app.execute_command();
                 let cmd = app.command_input.trim().to_string();
                 let parts: Vec<&str> = cmd.split_whitespace().collect();
                 if parts.is_empty() {
@@ -112,6 +117,10 @@ impl VimHandler {
                             app.mode = AppMode::Normal;
                         }
                     },
+                    "t" | "tree" => {
+                        app.show_file_tree = !app.show_file_tree;
+                        app.mode = AppMode::FileTree;
+                    }
                     _ => {
                         app.mode = AppMode::Normal;
                     }
@@ -127,6 +136,32 @@ impl VimHandler {
             }
             KeyCode::Char(c) => {
                 app.command_input.push(c);
+            }
+            _ => {}
+        }
+    }
+    fn handle_file_tree(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.mode = AppMode::Normal;
+            }
+            KeyCode::Char('j') => {
+                if app.file_list_selected < app.file_list.len().saturating_sub(1)
+                { 
+                    app.file_list_selected += 1;
+                }
+            }
+            KeyCode::Char('k') => {
+                if app.file_list_selected > 0 {
+                    app.file_list_selected -= 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some(path) = app.file_list.get(app.file_list_selected) {
+                    let path_clone = path.clone();
+                    app.open(path_clone);
+                    app.mode = AppMode::Normal;
+                }
             }
             _ => {}
         }

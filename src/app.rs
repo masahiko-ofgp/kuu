@@ -17,6 +17,7 @@ pub enum AppMode {
     Normal,
     Insert,
     Command,
+    FileTree,
     Quit,
 }
 
@@ -33,11 +34,14 @@ pub struct App {
     pub status_message: Option<String>,
     pub pending_cmd: Option<char>,
     pub yank_register: Option<String>,
+    pub file_list: Vec<PathBuf>,
+    pub file_list_selected: usize,
+    pub show_file_tree: bool,
 }
 
 impl App {
     pub fn new() -> Self {
-        Self {
+        let mut app = Self {
             mode: AppMode::Normal,
             buffer: Buffer::new(),
             cursor_x: 0,
@@ -50,6 +54,20 @@ impl App {
             status_message: None,
             pending_cmd: None,
             yank_register: None,
+            file_list: Vec::new(),
+            file_list_selected: 0,
+            show_file_tree: true,
+        };
+        app.update_file_list();
+        app
+    }
+
+    pub fn update_file_list(&mut self) {
+        if let Ok(entries) = std::fs::read_dir(".") {
+            self.file_list = entries
+                .filter_map(|entry| entry.ok().map(|e| e.path()))
+                .collect();
+            self.file_list.sort();
         }
     }
 
