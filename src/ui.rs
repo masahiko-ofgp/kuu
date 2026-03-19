@@ -14,21 +14,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
         ])
         .split(f.area());
 
+    // ---- Editor area ---
+    let editor_area = main_chunks[0];
 
-    // ------- Editor + Terminal area ------
-    //
-    let content_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(if app.show_terminal { 70 } else { 100 }),
-            Constraint::Percentage(if app.show_terminal { 70 } else { 0 }),
-        ])
-        .split(main_chunks[0]);
-
-    let editor_area = content_chunks[0];
-    let terminal_area = content_chunks[1];
-
-    // ---- Editor area ----
     let line_num_width = if app.config.show_line_numbers {4} else {0};
     
     let editor_chunks = Layout::default()
@@ -47,6 +35,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .title(format!(" Kuu "));
 
     let inner_editor_area = editor_block.inner(body_area);
+
+    app.scroll(inner_editor_area.height as usize);
 
     if app.config.show_line_numbers {
         let mut lines = Vec::new();
@@ -118,35 +108,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     f.render_widget(editor_widget, body_area);
 
-    // --- Terminal area ----
-    if app.show_terminal {
-        let terminal_lines: Vec<ListItem> = app.terminal_output
-            .iter()
-            .map(|s| ListItem::new(Span::raw(s)))
-            .collect();
-
-        let terminal_widget = List::new(terminal_lines)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title(" Terminal Output ( :term to toggle )"))
-            .style(Style::default()
-                .bg(Color::Reset)
-                .fg(Color::Gray));
-
-        f.render_widget(terminal_widget, terminal_area);
-    }
-
-    /*if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
-        let cursor_x_display = current_line
-            .chars()
-            .take(app.cursor_x)
-            .collect::<String>()
-            .width();
-        f.set_cursor_position(
-            (inner_editor_area.x + cursor_x_display as u16,
-             inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
-            );
-    }*/
 
     // ------- Status line ------
     //
@@ -195,10 +156,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 main_chunks[2]
             );
 
-            f.set_cursor_position(
-                (main_chunks[2].x + (cmd_display_width + 1) as u16,
-                 main_chunks[2].y)
-                );
+            f.set_cursor_position(Position {
+                x: main_chunks[2].x + (cmd_display_width + 1) as u16,
+                y: main_chunks[2].y,
+            });
         }
         _ => {
             f.render_widget(Paragraph::new(""), main_chunks[2]);
@@ -209,10 +170,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     .collect::<String>()
                     .width();
 
-                f.set_cursor_position(
-                    (inner_editor_area.x + cursor_x_display as u16,
-                     inner_editor_area.y + (app.cursor_y - app.row_offset) as u16)
-                    );
+                f.set_cursor_position(Position {
+                    x: inner_editor_area.x + cursor_x_display as u16,
+                    y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,
+                });
             }
         }
     }

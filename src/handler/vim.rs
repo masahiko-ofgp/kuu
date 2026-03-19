@@ -31,33 +31,6 @@ impl VimHandler {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
             }
-            /*KeyCode::Char('d') => {
-                match app.pending_cmd {
-                    Some('d') => {
-                        if let KeyCode::Char('d') = key.code {
-                            let new_len = app.buffer.delete_line(app.cursor_y);
-                            if app.cursor_y >= new_len && app.cursor_y > 0 {
-                                app.cursor_y = new_len - 1;
-                            }
-
-                            let line_len = app.buffer.lines[app.cursor_y].len();
-                            if app.cursor_x > line_len {
-                                app.cursor_x = if line_len > 0 { line_len - 1 } else { 0 };
-                            }
-                            app.pending_cmd = None;
-                        } else {
-                            app.pending_cmd = None;
-                        }
-                    }
-                    Some(_) => {
-                        //TODO 'dw' 'd$'
-                        app.pending_cmd = None;
-                    }
-                    None => {
-                        app.pending_cmd = Some('d');
-                    }
-                }
-            }*/
             KeyCode::Char('D') => {
                 app.buffer.kill_line(app.cursor_y, app.cursor_x);
             }
@@ -139,17 +112,6 @@ impl VimHandler {
                             app.mode = AppMode::Normal;
                         }
                     },
-                    "run" => {
-                        if parts.len() > 1 {
-                            let shell_cmd = parts[1..].join(" ");
-                            app.run_command(&shell_cmd);
-                        }
-                        app.mode = AppMode::Normal;
-                    }
-                    "term" | "terminal" => {
-                        app.show_terminal = !app.show_terminal;
-                        app.mode = AppMode::Normal;
-                    }
                     _ => {
                         app.mode = AppMode::Normal;
                     }
