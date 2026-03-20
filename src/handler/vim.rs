@@ -157,11 +157,28 @@ impl VimHandler {
                 }
             }
             KeyCode::Enter => {
-                if let Some(path) = app.file_list.get(app.file_list_selected) {
-                    let path_clone = path.clone();
-                    app.open(path_clone);
-                    app.mode = AppMode::Normal;
+                if let Some(path) = app.file_list.get(app.file_list_selected).cloned() {
+                    if path.is_dir() {
+                        app.update_file_list(path);
+                    } else {
+                        if app.is_buffer_modified() {
+                            app.status_message = Some("File modified! Save or discord changes first.".to_string());
+                            app.mode = AppMode::Normal;
+                        } else {
+                            app.open(path);
+                            app.mode = AppMode::Normal;
+                            app.status_message = Some("File opened".to_string());
+                        }
+                    }
                 }
+            }
+            KeyCode::Backspace | KeyCode::Char('h') => {
+                let current_dir = app.file_list.get(0)
+                    .and_then(|p| p.parent())
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| PathBuf::from("."));
+
+                app.update_file_list(current_dir);
             }
             _ => {}
         }

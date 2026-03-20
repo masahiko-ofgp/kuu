@@ -58,17 +58,40 @@ impl App {
             file_list_selected: 0,
             show_file_tree: true,
         };
-        app.update_file_list();
+        app.update_file_list(PathBuf::from("."));
         app
     }
 
-    pub fn update_file_list(&mut self) {
-        if let Ok(entries) = std::fs::read_dir(".") {
-            self.file_list = entries
+    pub fn update_file_list(&mut self, path: PathBuf) {
+        let target_dir = if path.is_dir() {
+            path
+        } else {
+            path.parent()
+                .unwrap_or(&PathBuf::from("."))
+                .to_path_buf()
+        };
+
+        if let Ok(entries) = std::fs::read_dir(&target_dir) {
+            self.file_list.clear();
+
+            if let Some(parent) = target_dir.parent() {
+                self.file_list.push(parent.to_path_buf());
+            }
+
+            let mut files: Vec<PathBuf> = entries
                 .filter_map(|entry| entry.ok().map(|e| e.path()))
                 .collect();
-            self.file_list.sort();
+
+            files.sort();
+
+            self.file_list.extend(files);
+            self.file_list_selected = 0;
         }
+    }
+
+    // TODO: This is placefolder.
+    pub fn is_buffer_modified(&self) -> bool {
+        false
     }
 
     pub fn with_file(mut self, path: PathBuf) -> Self {

@@ -33,7 +33,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .map(|(i, path)| {
                 let name = path.file_name()
                     .and_then(|n| n.to_str())
-                    .unwrap_or("?");
+                    .unwrap_or("..");
                 let is_dir = path.is_dir();
                 // TODO: icon
                 let icon = if is_dir {"\u{f413}"} else {"\u{ea7b}"};
@@ -51,7 +51,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                         .fg(Color::DarkGray)
                 };
 
-                ListItem::new(format!("{} {}", icon, name))
+                ListItem::new(format!(" {} {}", icon, name))
                     .style(style)
             })
             .collect();
