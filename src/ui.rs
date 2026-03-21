@@ -31,9 +31,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .iter()
             .enumerate()
             .map(|(i, path)| {
-                let name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("..");
+                let name = if let Some(parent) = app.current_dir.parent() {
+                    if path== parent {
+                        "..".to_string()
+                    } else {
+                        path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("..")
+                            .to_string()
+                    }
+                } else {
+                    path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("?")
+                        .to_string()
+                };
                 let is_dir = path.is_dir();
                 // TODO: icon
                 let icon = if is_dir {"\u{f413}"} else {"\u{ea7b}"};

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::highlight::Highlighter;
+use std::fs;
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -37,10 +38,15 @@ pub struct App {
     pub file_list: Vec<PathBuf>,
     pub file_list_selected: usize,
     pub show_file_tree: bool,
+    pub current_dir: PathBuf,
 }
 
 impl App {
     pub fn new() -> Self {
+
+        let current_dir = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."));
+
         let mut app = Self {
             mode: AppMode::Normal,
             buffer: Buffer::new(),
@@ -57,21 +63,28 @@ impl App {
             file_list: Vec::new(),
             file_list_selected: 0,
             show_file_tree: true,
+            current_dir: current_dir.clone(),
         };
-        app.update_file_list(PathBuf::from("."));
+
+        app.update_file_list(current_dir);
         app
     }
 
     pub fn update_file_list(&mut self, path: PathBuf) {
-        let target_dir = if path.is_dir() {
-            path
+        let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
+            if abs_path.is_dir() {
+                abs_path
+            } else {
+                abs_path.parent()
+                    .unwrap_or(&abs_path)
+                    .to_path_buf()
+            }
         } else {
-            path.parent()
-                .unwrap_or(&PathBuf::from("."))
-                .to_path_buf()
+            path
         };
 
-        if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        if let Ok(entries) = fs::read_dir(&target_dir) {
+            self.current_dir = target_dir.clone();
             self.file_list.clear();
 
             if let Some(parent) = target_dir.parent() {
@@ -131,12 +144,19 @@ impl App {
     pub fn open(&mut self, path: PathBuf) {
         if let Ok(buffer) = Buffer::load(&path) {
             self.buffer = buffer;
+            self.file_path = std::fs::canonicalize(&path)
+                .ok()
+                .or(Some(path));
 
-            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+            if let Some(ext) = self.file_path.as_ref()
+                .and_then(|p| p.extension())
+                .and_then(|e| e.to_str()) 
+            {
                 self.highlighter.set_language_by_extension(ext);
             }
-
-            self.file_path = Some(path);
+            self.cursor_x = 0;
+            self.cursor_y = 0;
+            self.row_offset = 0;
         }
     }
 
