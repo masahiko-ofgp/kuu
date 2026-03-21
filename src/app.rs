@@ -160,6 +160,15 @@ impl App {
         }
     }
 
+    pub fn close_file(&mut self) {
+        self.buffer = Buffer::new();
+        self.file_path = None;
+        self.cursor_x = 0;
+        self.cursor_y = 0;
+        self.row_offset = 0;
+        self.highlighter = Highlighter::new();
+        self.status_message = Some("File closed".to_string());
+    }
     pub fn move_cursor_left(&mut self) {
         if self.cursor_x > 0 {
             self.cursor_x -= 1;

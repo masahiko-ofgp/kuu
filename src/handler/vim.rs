@@ -105,8 +105,16 @@ impl VimHandler {
                         app.mode = AppMode::Normal;
                     },
                     "q" | "quit" => {
-                        app.mode = AppMode::Quit;
+                        if app.file_path.is_some() || !app.buffer.lines.is_empty() && app.buffer.lines != vec![""] {
+                            app.close_file();
+                            app.mode = AppMode::Normal;
+                        } else {
+                            app.mode = AppMode::Quit;
+                        }
                     },
+                    "q!" => {
+                        app.mode = AppMode::Quit;
+                    }
                     "wq" => {
                         let _ = app.save();
                         app.mode = AppMode::Quit;
