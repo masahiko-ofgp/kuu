@@ -31,13 +31,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .iter()
             .enumerate()
             .map(|(i, path)| {
+                let is_selected = i == app.file_list_selected;
+
+                let icon = if path.is_dir() {
+                    "\u{f4d3}"
+                } else {
+                    "\u{f15b}"
+                };
+
                 let name = if let Some(parent) = app.current_dir.parent() {
                     if path== parent {
                         "..".to_string()
                     } else {
                         path.file_name()
                             .and_then(|n| n.to_str())
-                            .unwrap_or("..")
+                            .unwrap_or("?")
                             .to_string()
                     }
                 } else {
@@ -46,25 +54,25 @@ pub fn render(f: &mut Frame, app: &mut App) {
                         .unwrap_or("?")
                         .to_string()
                 };
-                let is_dir = path.is_dir();
-                // TODO: icon
-                let icon = if is_dir {"\u{f413}"} else {"\u{ea7b}"};
 
-                let style = if i == app.file_list_selected {
-                    Style::default()
-                        .bg(Color::Blue)
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD)
-                } else if app.mode == AppMode::FileTree {
-                    Style::default()
-                        .fg(Color::White)
+                let (base_style, icon_style) = if is_selected {
+                    (
+                        Style::default().bg(Color::Blue).fg(Color::White).add_modifier(Modifier::BOLD),
+                        Style::default().bg(Color::Blue).fg(Color::Yellow),
+                    )
                 } else {
-                    Style::default()
-                        .fg(Color::DarkGray)
+                    (
+                        Style::default().fg(Color::Gray),
+                        Style::default().fg(if path.is_dir() { Color::Cyan} else {Color::White}))
+                    )
                 };
 
-                ListItem::new(format!(" {} {}", icon, name))
-                    .style(style)
+                let line = Line::from(vec![
+                    Span::styled(format!(" {} ", icon), icon_style),
+                    Span::styled(name, base_style),
+                ]);
+
+                ListItem::new(line)
             })
             .collect();
 
