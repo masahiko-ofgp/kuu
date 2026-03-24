@@ -169,6 +169,7 @@ impl App {
         self.highlighter = Highlighter::new();
         self.status_message = Some("File closed".to_string());
     }
+
     pub fn move_cursor_left(&mut self) {
         if self.cursor_x > 0 {
             self.cursor_x -= 1;
@@ -185,26 +186,39 @@ impl App {
     pub fn move_cursor_up(&mut self) {
         if self.cursor_y > 0 {
             self.cursor_y -= 1;
-            self.snap_cursor_to_line_end();
+            self.snap_cursor();
         }
     }
 
     pub fn move_cursor_down(&mut self) {
         if self.cursor_y < self.buffer.lines.len() - 1 {
             self.cursor_y += 1;
-            self.snap_cursor_to_line_end();
+            self.snap_cursor();
         }
     }
 
-    pub fn snap_cursor_to_line_end(&mut self) {
-        let char_count = self.buffer.lines[self.cursor_y].chars().count();
-        if self.cursor_x > char_count {
-            self.cursor_x = char_count;
+    pub fn snap_cursor(&mut self) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            let char_count = line.chars().count();
+
+            let max_x = if self.mode == AppMode::Insert {
+                char_count
+            } else {
+                char_count.saturating_sub(1)
+            };
+
+            if self.cursor_x > max_x {
+                self.cursor_x = max_x;
+            }
+        } else {
+            self.cursor_y = self.buffer.lines.len()
+                .saturating_sub(1);
+            self.cursor_x = 0;
         }
     }
 
     pub fn insert_newline(&mut self) {
-        self.buffer.insert_newline(self.cursor_y, self.cursor_x);
+        self.buffer.split_line(self.cursor_y, self.cursor_x);
         self.cursor_y += 1;
         self.cursor_x = 0;
     }
@@ -223,20 +237,30 @@ impl App {
     }
 
     pub fn open_new_line_below(&mut self) {
-        self.buffer.insert_empty_line(self.cursor_y);
+        self.buffer.insert_line_at(self.cursor_y + 1, String::new());
         self.cursor_y += 1;
         self.cursor_x = 0;
         self.mode = AppMode::Insert;
     }
 
     pub fn open_new_line_above(&mut self) {
-        self.buffer.insert_line_above(self.cursor_y);
+        self.buffer.insert_line_at(self.cursor_y, String::new());
         self.cursor_x = 0;
         self.mode = AppMode::Insert;
     }
 
+    pub fn kill_line(&mut self) {
+        let tail = self.buffer.truncate_line(self.cursor_y, self.cursor_x);
+
+        if tail.is_empty() && self.cursor_y < self.buffer.lines.len() - 1 {
+            self.buffer.join_lines(self.cursor_y);
+        } else {
+            self.yank_register = Some(tail);
+        }
+    }
+
     pub fn yank_current_line(&mut self) {
-        if let Some(line) = self.buffer.get_line(self.cursor_y) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y).cloned() {
             self.yank_register = Some(line);
             self.status_message = Some("Yanked 1 line".to_string());
         }
@@ -244,7 +268,7 @@ impl App {
 
     pub fn put_after(&mut self) {
         if let Some(text) = &self.yank_register {
-            self.buffer.insert_line(self.cursor_y, text.clone());
+            self.buffer.insert_line_at(self.cursor_y, text.clone());
             self.cursor_y += 1;
             self.cursor_x = 0;
             self.status_message = Some("Pasted".to_string());
@@ -260,14 +284,14 @@ impl App {
     }
 
     pub fn delete_current_line(&mut self) {
-        if let Some(line) = self.buffer.get_line(self.cursor_y) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y).cloned() {
             self.yank_register = Some(line);
         }
         let new_len = self.buffer.delete_line(self.cursor_y);
         if self.cursor_y >= new_len && self.cursor_y > 0 {
             self.cursor_y = new_len - 1;
         }
-        self.snap_cursor_to_line_end();
+        self.snap_cursor();
     }
     pub fn scroll(&mut self, terminal_height: usize) {
         if self.cursor_y < self.row_offset {

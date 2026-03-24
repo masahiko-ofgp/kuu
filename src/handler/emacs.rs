@@ -30,10 +30,10 @@ impl EmacsHandler {
                 app.cursor_x = app.buffer.lines[app.cursor_y].len();
             }
             KeyCode::Char('d') => {
-                app.buffer.delete_char_at(app.cursor_y, app.cursor_x);
+                app.buffer.delete_char(app.cursor_y, app.cursor_x);
             }
             KeyCode::Char('k') => {
-                app.buffer.kill_line(app.cursor_y, app.cursor_x);
+                app.kill_line();
             }
             KeyCode::Char('g') => app.mode = AppMode::Quit,
             _ => {}

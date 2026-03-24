@@ -63,7 +63,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 } else {
                     (
                         Style::default().fg(Color::Gray),
-                        Style::default().fg(if path.is_dir() { Color::Cyan} else {Color::White}))
+                        Style::default().fg(if path.is_dir() { Color::Cyan} else {Color::White})
                     )
                 };
 

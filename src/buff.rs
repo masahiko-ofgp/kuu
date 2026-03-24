@@ -67,13 +67,26 @@ impl Buffer {
         }
     }
 
-    pub fn insert_newline(&mut self, row: usize, col: usize) {
+    pub fn split_line(&mut self, row: usize, col: usize) {
         let byte_idx = self.char_to_byte_idx(row, col);
 
         if let Some(line) = self.lines.get_mut(row) {
-            let new_line = line.split_off(byte_idx);
-            self.lines.insert(row + 1, new_line);
+            let new_part = line.split_off(byte_idx);
+            self.lines.insert(row + 1, new_part);
             self.mark_dirty();
+        }
+    }
+
+    pub fn truncate_line(&mut self, row: usize, col: usize) -> String
+    {
+        let byte_idx = self.char_to_byte_idx(row, col);
+
+        if let Some(line) = self.lines.get_mut(row) {
+            let tail = line.split_off(byte_idx);
+            self.mark_dirty();
+            tail
+        } else {
+            String::new()
         }
     }
 
@@ -90,21 +103,6 @@ impl Buffer {
         }
     }
 
-    pub fn insert_empty_line(&mut self, at_row: usize) {
-        if at_row < self.lines.len() {
-            self.lines.insert(at_row + 1, String::new());
-            self.mark_dirty();
-        } else {
-            self.lines.push(String::new());
-            self.mark_dirty();
-        }
-    }
-    
-    pub fn insert_line_above(&mut self, row: usize) {
-        self.lines.insert(row, String::new());
-        self.mark_dirty();
-    }
-
     pub fn delete_char(&mut self, row: usize, col: usize) {
         let byte_idx = self.char_to_byte_idx(row, col);
 
@@ -113,30 +111,6 @@ impl Buffer {
                 line.remove(byte_idx);
                 self.mark_dirty();
             }
-        }
-    }
-
-    pub fn delete_char_at(&mut self, row: usize, col: usize) {
-        if let Some(line) = self.lines.get_mut(row) {
-            let char_count = line.chars().count();
-
-            if col < char_count {
-                if let Some((byte_idx, _)) = line.char_indices().nth(col) {
-                    line.remove(byte_idx);
-                    self.mark_dirty();
-                }
-            } else if row < self.lines.len() - 1 {
-                self.join_lines(row);
-            }
-        }
-    }
-
-    pub fn kill_line(&mut self, row: usize, col: usize) {
-        let byte_idx = self.char_to_byte_idx(row, col);
-
-        if let Some(line) = self.lines.get_mut(row) {
-            line.truncate(byte_idx);
-            self.mark_dirty();
         }
     }
 
@@ -150,21 +124,8 @@ impl Buffer {
         self.lines.len()
     }
 
-    pub fn get_line(&self, row: usize) -> Option<String> {
-        self.lines.get(row).cloned()
-    }
-
-    pub fn insert_line(&mut self, row: usize, text: String) {
-        if row + 1 >= self.lines.len() {
-            self.lines.push(text);
-        } else {
-            self.lines.insert(row + 1, text);
-        }
-        self.mark_dirty();
-    }
-
     pub fn insert_line_at(&mut self, row: usize, text: String) {
-        if row < self.lines.len() {
+        if row <= self.lines.len() {
             self.lines.insert(row, text);
         } else {
             self.lines.push(text);

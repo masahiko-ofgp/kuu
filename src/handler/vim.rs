@@ -38,7 +38,7 @@ impl VimHandler {
                 }
             }
             KeyCode::Char('D') => {
-                app.buffer.kill_line(app.cursor_y, app.cursor_x);
+                app.kill_line();
             }
             KeyCode::Char('p') => {
                 app.put_after();
