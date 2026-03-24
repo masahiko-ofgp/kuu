@@ -6,6 +6,13 @@ use crate::highlight::Highlighter;
 use std::fs;
 
 
+#[derive(PartialEq)]
+enum CharKind {
+    Whitespace,
+    Word,
+    Punctuation,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum KeyBindMode {
@@ -293,6 +300,55 @@ impl App {
         }
         self.snap_cursor();
     }
+
+    pub fn move_word_forward(&mut self) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = self.cursor_x;
+
+            if x >= chars.len() {
+                self.move_to_next_line_start();
+                return;
+            }
+
+            let start_kind = self.get_char_kind(chars[x]);
+
+            while x < chars.len() && self.get_char_kind(chars[x]) == start_kind { x += 1; }
+
+            while x < chars.len() && chars[x].is_whitespace() { x += 1; }
+
+            if x < chars.len() {
+                self.cursor_x = x;
+            } else {
+                self.move_to_next_line_start();
+            }
+            self.snap_cursor();
+        }
+    }
+
+    fn move_to_next_line_start(&mut self) {
+        if self.cursor_y < self.buffer.lines.len() - 1 {
+            self.cursor_y += 1;
+            let next_line = &self.buffer.lines[self.cursor_y];
+            self.cursor_x = next_line
+                .char_indices()
+                .find(|(_, c)| !c.is_whitespace())
+                .map(|(i, _)| i)
+                .unwrap_or(0);
+        }
+    }
+
+    fn get_char_kind(&self, c: char) -> CharKind {
+        if c.is_whitespace() {
+            CharKind::Whitespace
+        } else if c.is_alphanumeric() || c == '_' {
+            CharKind::Word
+        } else {
+            CharKind::Punctuation
+        }
+    }
+
+
     pub fn scroll(&mut self, terminal_height: usize) {
         if self.cursor_y < self.row_offset {
             self.row_offset = self.cursor_y;

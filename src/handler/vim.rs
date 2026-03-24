@@ -20,6 +20,25 @@ impl KeyHandler for VimHandler {
 
 impl VimHandler {
     fn handle_normal(&self, key: KeyEvent, app: &mut App) {
+        if let Some(op) = app.pending_cmd {
+            match (op, key.code) {
+                ('d', KeyCode::Char('d')) => {
+                    app.delete_current_line();
+                    app.pending_cmd = None;
+                }
+                ('g', KeyCode::Char('g')) => {
+                    app.cursor_y = 0;
+                    app.cursor_x = 0;
+                    app.pending_cmd = None;
+                }
+                ('y', KeyCode::Char('y')) => {
+                    app.yank_current_line();
+                    app.pending_cmd = None;
+                }
+                _ => app.pending_cmd = None,
+            }
+            return;
+        }
         match key.code {
             KeyCode::Char('i') => app.mode = AppMode::Insert,
             KeyCode::Char('h') => app.move_cursor_left(),
@@ -28,6 +47,7 @@ impl VimHandler {
             KeyCode::Char('l') => app.move_cursor_right(),
             KeyCode::Char('o') => app.open_new_line_below(),
             KeyCode::Char('O') => app.open_new_line_above(),
+            KeyCode::Char('w') => app.move_word_forward(),
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
@@ -44,26 +64,18 @@ impl VimHandler {
                 app.put_after();
                 app.pending_cmd = None;
             }
+            KeyCode::Char('d') => {
+                app.pending_cmd = Some('d');
+            }
+            KeyCode::Char('y') => {
+                app.pending_cmd = Some('y');
+            }
+            KeyCode::Char('g') => {
+                app.pending_cmd = Some('g');
+            }
             KeyCode::Char('P') => {
                 app.put_before();
                 app.pending_cmd = None;
-            }
-            KeyCode::Char(c) => {
-                match app.pending_cmd {
-                    Some(prev_char) => {
-                        match (prev_char, c) {
-                            ('y', 'y') => app.yank_current_line(),
-                            ('d', 'd') => app.delete_current_line(),
-                            _ => {}
-                        }
-                        app.pending_cmd = None;
-                    }
-                    None => {
-                        if c == 'y' || c == 'd' {
-                            app.pending_cmd = Some(c);
-                        }
-                    }
-                }
             }
             _ => {}
         }
