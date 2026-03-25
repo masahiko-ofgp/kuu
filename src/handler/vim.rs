@@ -48,6 +48,7 @@ impl VimHandler {
             KeyCode::Char('o') => app.open_new_line_below(),
             KeyCode::Char('O') => app.open_new_line_above(),
             KeyCode::Char('w') => app.move_word_forward(),
+            KeyCode::Char('b') => app.move_word_backward(),
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();

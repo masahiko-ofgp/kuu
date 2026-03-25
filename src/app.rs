@@ -326,6 +326,36 @@ impl App {
         }
     }
 
+    pub fn move_word_backward(&mut self) {
+        if self.cursor_x == 0 {
+            if self.cursor_y > 0 {
+                self.cursor_y -= 1;
+
+                let len = self.buffer.lines[self.cursor_y].chars().count();
+                self.cursor_x = len.saturating_sub(1);
+            }
+            return;
+        }
+
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = self.cursor_x.saturating_sub(1);
+
+            while x > 0 && chars[x].is_whitespace() {
+                x -= 1;
+            }
+
+            let kind = self.get_char_kind(chars[x]);
+
+            while x > 0 && self.get_char_kind(chars[x - 1]) == kind {
+                x -= 1;
+            }
+
+            self.cursor_x = x;
+        }
+        self.snap_cursor();
+    }
+
     fn move_to_next_line_start(&mut self) {
         if self.cursor_y < self.buffer.lines.len() - 1 {
             self.cursor_y += 1;
