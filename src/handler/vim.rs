@@ -84,12 +84,18 @@ impl VimHandler {
 
     fn handle_insert(&self, key: KeyEvent, app: &mut App) {
         match key.code {
-            KeyCode::Esc => app.mode = AppMode::Normal,
+            KeyCode::Esc => {
+                app.move_cursor_left();
+                app.mode = AppMode::Normal;
+            }
             KeyCode::Enter => app.insert_newline(),
             KeyCode::Backspace => app.handle_backspace(),
             KeyCode::Char(c) => {
                 app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
                 app.cursor_x += 1;
+            }
+            KeyCode::Tab => {
+                app.insert_tab();
             }
             _ => {}
         }

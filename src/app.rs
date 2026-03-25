@@ -230,6 +230,14 @@ impl App {
         self.cursor_x = 0;
     }
 
+    pub fn insert_tab(&mut self) {
+        let tab_size = self.config.tab_size;
+        for _ in 0..tab_size {
+            self.buffer.insert_char(self.cursor_y, self.cursor_x, ' ');
+            self.cursor_x += 1;
+        }
+    }
+
     pub fn handle_backspace(&mut self) {
         if self.cursor_x > 0 {
             self.buffer.delete_char(self.cursor_y, self.cursor_x - 1);

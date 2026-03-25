@@ -8,6 +8,7 @@ use crate::app::KeyBindMode;
 pub struct Config {
     pub key_bind_mode: KeyBindMode,
     pub show_line_numbers: bool,
+    pub tab_size: usize,
 }
 
 impl Default for Config {
@@ -15,6 +16,7 @@ impl Default for Config {
         Self {
             key_bind_mode: KeyBindMode::Vim,
             show_line_numbers: true,
+            tab_size: 4,
         }
     }
 }
