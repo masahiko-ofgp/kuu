@@ -1,4 +1,9 @@
-["fn" "let" "match" "if" "else" "pub" "use" "struct" "impl" "enum" "type"] @keyword
+["as" "async" "await" "break" "const" "continue" "default" "dyn" "else" "enum" "fn" "for" "gen" "if" "impl" "in" "let" "loop" "macro_rules!" "match" "mod" "pub" "raw" "ref" "return" "static" "struct" "trait" "type" "union" "unsafe" "use" "where" "while" "yield"] @keyword
+(crate) @keyword
+(use_list (self) @keyword)
+(scoped_use_list (self) @keyword)
+(scoped_identifier (self) @keyword)
+(super) @keyword
 (mutable_specifier) @keyword
 
 (line_comment) @comment
@@ -18,3 +23,5 @@
 
 ["(" ")" "{" "}" "[" "]" "<" ">"] @punctuation.bracket
 ["::" ":" "." "," ";"] @punctuation.delimiter
+
+["&" "'" "*" ] @operator

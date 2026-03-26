@@ -120,7 +120,9 @@ impl Highlighter {
                 } else if capture_name.starts_with("type") {
                     Color::Indexed(176)
                 } else if capture_name.starts_with("punctuation") {
-                    Color::Cyan
+                    Color::LightYellow
+                } else if capture_name.starts_with("operator") {
+                    Color::LightYellow
                 } else {
                     Color::White
                 };
