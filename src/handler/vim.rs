@@ -35,6 +35,14 @@ impl VimHandler {
                     app.yank_current_line();
                     app.pending_cmd = None;
                 }
+                ('>', KeyCode::Char('>')) => {
+                    app.indent_current_line();
+                    app.pending_cmd = None;
+                }
+                ('<', KeyCode::Char('<')) => {
+                    app.unindent_current_line();
+                    app.pending_cmd = None;
+                }
                 _ => app.pending_cmd = None,
             }
             return;
@@ -65,18 +73,24 @@ impl VimHandler {
                 app.put_after();
                 app.pending_cmd = None;
             }
+            KeyCode::Char('P') => {
+                app.put_before();
+                app.pending_cmd = None;
+            }
             KeyCode::Char('d') => {
                 app.pending_cmd = Some('d');
-            }
-            KeyCode::Char('y') => {
-                app.pending_cmd = Some('y');
             }
             KeyCode::Char('g') => {
                 app.pending_cmd = Some('g');
             }
-            KeyCode::Char('P') => {
-                app.put_before();
-                app.pending_cmd = None;
+            KeyCode::Char('y') => {
+                app.pending_cmd = Some('y');
+            }
+            KeyCode::Char('>') => {
+                app.pending_cmd = Some('>');
+            }
+            KeyCode::Char('<') => {
+                app.pending_cmd = Some('<');
             }
             _ => {}
         }

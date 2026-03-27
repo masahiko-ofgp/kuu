@@ -133,6 +133,44 @@ impl Buffer {
         self.mark_dirty();
     }
 
+    pub fn prepend_to_line(&mut self, row: usize, text: &str) {
+        if let Some(line) = self.lines.get_mut(row) {
+            line.insert_str(0, text);
+            self.mark_dirty();
+        }
+    }
+
+    pub fn remove_leading_spaces(&mut self, row: usize, n: usize) -> usize
+    {
+        if let Some(line) = self.lines.get_mut(row) {
+            let mut space_count = 0;
+
+            for c in line.chars() {
+                if c == ' ' && space_count < n {
+                    space_count += 1;
+                } else {
+                    break;
+                }
+            }
+            if space_count > 0 {
+                line.replace_range(0..space_count, "");
+                self.mark_dirty();
+            }
+            return space_count;
+        }
+        0
+    }
+
+    pub fn first_non_whitespace_idx(&self, row: usize) -> usize {
+        if let Some(line) = self.lines.get(row) {
+            line.chars()
+                .take_while(|c| c.is_whitespace())
+                .count()
+        } else {
+            0
+        }
+    }
+
     pub fn as_full_text(&mut self) -> &str {
         if self.is_dirty || self.full_text_cache.is_none() {
             self.full_text_cache = Some(self.lines.join("\n"));

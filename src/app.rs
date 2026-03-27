@@ -309,6 +309,23 @@ impl App {
         self.snap_cursor();
     }
 
+    pub fn indent_current_line(&mut self) {
+        let tab_size = self.config.tab_size;
+        let indent = " ".repeat(tab_size);
+
+        self.buffer.prepend_to_line(self.cursor_y, &indent);
+        self.cursor_x = self.buffer.first_non_whitespace_idx(self.cursor_y);
+        self.snap_cursor();
+    }
+
+    pub fn unindent_current_line(&mut self) {
+        let tab_size = self.config.tab_size;
+
+        self.buffer.remove_leading_spaces(self.cursor_y, tab_size);
+        self.cursor_x = self.buffer.first_non_whitespace_idx(self.cursor_y);
+        self.snap_cursor();
+    }
+
     pub fn move_word_forward(&mut self) {
         if let Some(line) = self.buffer.lines.get(self.cursor_y) {
             let chars: Vec<char> = line.chars().collect();
