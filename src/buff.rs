@@ -53,7 +53,7 @@ impl Buffer {
         Ok(())
     }
 
-    fn mark_dirty(&mut self) {
+    pub fn mark_dirty(&mut self) {
         self.is_dirty = true;
         self.full_text_cache = None;
     }

@@ -309,6 +309,35 @@ impl App {
         self.snap_cursor();
     }
 
+    pub fn change_current_line(&mut self) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            self.yank_register = Some(line.clone());
+
+            let indent: String = line
+                .chars()
+                .take_while(|c| c.is_whitespace())
+                .collect();
+
+            let indent_len = indent.chars().count();
+
+            if let Some(line_mut) = self.buffer.lines.get_mut(self.cursor_y) {
+                line_mut.clear();
+                line_mut.push_str(&indent);
+                self.buffer.mark_dirty();
+            }
+
+            self.cursor_x = indent_len;
+            self.mode = AppMode::Insert;
+        }
+        self.snap_cursor();
+    }
+
+    pub fn change_to_end_of_line(&mut self) {
+        let tail = self.buffer.truncate_line(self.cursor_y, self.cursor_x);
+        self.yank_register = Some(tail);
+        self.mode = AppMode::Insert;
+    }
+
     pub fn indent_current_line(&mut self) {
         let tab_size = self.config.tab_size;
         let indent = " ".repeat(tab_size);

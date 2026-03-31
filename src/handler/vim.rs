@@ -43,6 +43,10 @@ impl VimHandler {
                     app.unindent_current_line();
                     app.pending_cmd = None;
                 }
+                ('c', KeyCode::Char('c')) => {
+                    app.change_current_line();
+                    app.pending_cmd = None;
+                }
                 _ => app.pending_cmd = None,
             }
             return;
@@ -69,6 +73,9 @@ impl VimHandler {
             KeyCode::Char('D') => {
                 app.kill_line();
             }
+            KeyCode::Char('C') => {
+                app.change_to_end_of_line();
+            }
             KeyCode::Char('p') => {
                 app.put_after();
                 app.pending_cmd = None;
@@ -85,6 +92,9 @@ impl VimHandler {
             }
             KeyCode::Char('y') => {
                 app.pending_cmd = Some('y');
+            }
+            KeyCode::Char('c') => {
+                app.pending_cmd = Some('c');
             }
             KeyCode::Char('>') => {
                 app.pending_cmd = Some('>');
