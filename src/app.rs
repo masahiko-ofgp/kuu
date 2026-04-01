@@ -46,6 +46,7 @@ pub struct App {
     pub file_list_selected: usize,
     pub show_file_tree: bool,
     pub current_dir: PathBuf,
+    pub editor_viewport_height: u16,
 }
 
 impl App {
@@ -71,6 +72,7 @@ impl App {
             file_list_selected: 0,
             show_file_tree: true,
             current_dir: current_dir.clone(),
+            editor_viewport_height: 0,
         };
 
         app.update_file_list(current_dir);
@@ -107,6 +109,10 @@ impl App {
             self.file_list.extend(files);
             self.file_list_selected = 0;
         }
+    }
+
+    pub fn update_viewport_height(&mut self, height: u16) {
+        self.editor_viewport_height = height;
     }
 
     // TODO: This is placefolder.
@@ -222,6 +228,41 @@ impl App {
                 .saturating_sub(1);
             self.cursor_x = 0;
         }
+    }
+
+    pub fn center_cursor(&mut self) {
+        let h = self.editor_viewport_height;
+
+        if h > 0 {
+            self.row_offset = self.cursor_y.saturating_sub((h / 2) as usize);
+        }
+    }
+
+    pub fn scroll_half_page_down(&mut self) {
+        let h = self.editor_viewport_height;
+        let amount = h / 2;
+
+        for _ in 0..amount {
+            self.move_cursor_down();
+        }
+
+        self.row_offset = self.row_offset.saturating_add(amount.into());
+    }
+
+    pub fn scroll_half_page_up(&mut self) {
+        let h = self.editor_viewport_height as usize;
+        let amount = h / 2;
+
+        for _ in 0..amount {
+            self.move_cursor_up();
+        }
+
+        self.row_offset = self.row_offset.saturating_sub(amount);
+    }
+
+    pub fn replace_char(&mut self, c: char) {
+        self.buffer.delete_char(self.cursor_y, self.cursor_x);
+        self.buffer.insert_char(self.cursor_y, self.cursor_x, c);
     }
 
     pub fn insert_newline(&mut self) {

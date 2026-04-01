@@ -47,6 +47,14 @@ impl VimHandler {
                     app.change_current_line();
                     app.pending_cmd = None;
                 }
+                ('r', KeyCode::Char(c)) => {
+                    app.replace_char(c);
+                    app.pending_cmd = None;
+                }
+                ('z', KeyCode::Char('z')) => {
+                    app.center_cursor();
+                    app.pending_cmd = None;
+                }
                 _ => app.pending_cmd = None,
             }
             return;
@@ -61,6 +69,10 @@ impl VimHandler {
             KeyCode::Char('O') => app.open_new_line_above(),
             KeyCode::Char('w') => app.move_word_forward(),
             KeyCode::Char('b') => app.move_word_backward(),
+            KeyCode::Char('0') => app.cursor_x = 0,
+            KeyCode::Char('$') => {
+                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count().saturating_sub(1);
+            }
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
@@ -85,7 +97,16 @@ impl VimHandler {
                 app.pending_cmd = None;
             }
             KeyCode::Char('d') => {
-                app.pending_cmd = Some('d');
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    app.scroll_half_page_down();
+                } else {
+                    app.pending_cmd = Some('d');
+                }
+            }
+            KeyCode::Char('u') => {
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    app.scroll_half_page_up();
+                }
             }
             KeyCode::Char('g') => {
                 app.pending_cmd = Some('g');
@@ -101,6 +122,12 @@ impl VimHandler {
             }
             KeyCode::Char('<') => {
                 app.pending_cmd = Some('<');
+            }
+            KeyCode::Char('r') => {
+                app.pending_cmd = Some('r');
+            }
+            KeyCode::Char('z') => {
+                app.pending_cmd = Some('z');
             }
             _ => {}
         }

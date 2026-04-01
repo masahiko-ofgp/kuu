@@ -12,6 +12,8 @@ impl KeyHandler for EmacsHandler {
 
         if key.modifiers.contains(KeyModifiers::CONTROL) {
             self.handle_control_codes(key.code, app);
+        } else if key.modifiers.contains(KeyModifiers::ALT) {
+            self.handle_alt_codes(key.code, app);
         } else {
             self.handle_plain_keys(key.code, app);
         }
@@ -27,7 +29,7 @@ impl EmacsHandler {
             KeyCode::Char('f') => app.move_cursor_right(),
             KeyCode::Char('a') => app.cursor_x = 0,
             KeyCode::Char('e') => {
-                app.cursor_x = app.buffer.lines[app.cursor_y].len();
+                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count();
             }
             KeyCode::Char('d') => {
                 app.buffer.delete_char(app.cursor_y, app.cursor_x);
@@ -35,7 +37,30 @@ impl EmacsHandler {
             KeyCode::Char('k') => {
                 app.kill_line();
             }
+            KeyCode::Char('y') => {
+                app.put_before();
+            }
             KeyCode::Char('g') => app.mode = AppMode::Quit,
+            KeyCode::Char('h') => app.handle_backspace(),
+            KeyCode::Char('l') => app.center_cursor(),
+            _ => {}
+        }
+    }
+
+    fn handle_alt_codes(&self, code: KeyCode, app: &mut App) {
+        match code {
+            KeyCode::Char('f') => app.move_word_forward(),
+            KeyCode::Char('b') => app.move_word_backward(),
+            KeyCode::Char('<') => {
+                app.cursor_y = 0;
+                app.cursor_x = 0;
+            }
+            KeyCode::Char('>') => {
+                app.cursor_y = app.buffer.lines.len()
+                    .saturating_sub(1);
+                app.cursor_x = 0;
+                app.snap_cursor();
+            }
             _ => {}
         }
     }

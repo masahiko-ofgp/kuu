@@ -11,8 +11,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
             Constraint::Min(0),
             Constraint::Length(1),
             Constraint::Length(1),
-        ])
+        ].as_ref())
         .split(f.area());
+
+    app.update_viewport_height(main_chunks[0].height);
 
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
