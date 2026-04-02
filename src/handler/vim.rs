@@ -22,41 +22,20 @@ impl VimHandler {
     fn handle_normal(&self, key: KeyEvent, app: &mut App) {
         if let Some(op) = app.pending_cmd {
             match (op, key.code) {
-                ('d', KeyCode::Char('d')) => {
-                    app.delete_current_line();
-                    app.pending_cmd = None;
-                }
+                ('d', KeyCode::Char('d')) => app.delete_current_line(),
                 ('g', KeyCode::Char('g')) => {
                     app.cursor_y = 0;
                     app.cursor_x = 0;
-                    app.pending_cmd = None;
                 }
-                ('y', KeyCode::Char('y')) => {
-                    app.yank_current_line();
-                    app.pending_cmd = None;
-                }
-                ('>', KeyCode::Char('>')) => {
-                    app.indent_current_line();
-                    app.pending_cmd = None;
-                }
-                ('<', KeyCode::Char('<')) => {
-                    app.unindent_current_line();
-                    app.pending_cmd = None;
-                }
-                ('c', KeyCode::Char('c')) => {
-                    app.change_current_line();
-                    app.pending_cmd = None;
-                }
-                ('r', KeyCode::Char(c)) => {
-                    app.replace_char(c);
-                    app.pending_cmd = None;
-                }
-                ('z', KeyCode::Char('z')) => {
-                    app.center_cursor();
-                    app.pending_cmd = None;
-                }
-                _ => app.pending_cmd = None,
+                ('y', KeyCode::Char('y')) => app.yank_current_line(),
+                ('>', KeyCode::Char('>')) => app.indent_current_line(),
+                ('<', KeyCode::Char('<')) => app.unindent_current_line(),
+                ('c', KeyCode::Char('c')) => app.change_current_line(),
+                ('r', KeyCode::Char(c)) => app.replace_char(c),
+                ('z', KeyCode::Char('z')) => app.center_cursor(),
+                _ => {}
             }
+            app.clear_pending();
             return;
         }
         match key.code {
@@ -90,11 +69,11 @@ impl VimHandler {
             }
             KeyCode::Char('p') => {
                 app.put_after();
-                app.pending_cmd = None;
+                app.clear_pending();
             }
             KeyCode::Char('P') => {
                 app.put_before();
-                app.pending_cmd = None;
+                app.clear_pending();
             }
             KeyCode::Char('d') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -223,41 +202,10 @@ impl VimHandler {
             KeyCode::Char('q') | KeyCode::Esc => {
                 app.mode = AppMode::Normal;
             }
-            KeyCode::Char('j') => {
-                if app.file_list_selected < app.file_list.len().saturating_sub(1)
-                { 
-                    app.file_list_selected += 1;
-                }
-            }
-            KeyCode::Char('k') => {
-                if app.file_list_selected > 0 {
-                    app.file_list_selected -= 1;
-                }
-            }
-            KeyCode::Enter => {
-                if let Some(path) = app.file_list.get(app.file_list_selected).cloned() {
-                    if path.is_dir() {
-                        app.update_file_list(path);
-                    } else {
-                        if app.is_buffer_modified() {
-                            app.status_message = Some("File modified! Save or discord changes first.".to_string());
-                            app.mode = AppMode::Normal;
-                        } else {
-                            app.open(path);
-                            app.mode = AppMode::Normal;
-                            app.status_message = Some("File opened".to_string());
-                        }
-                    }
-                }
-            }
-            KeyCode::Backspace | KeyCode::Char('h') => {
-                let current_dir = app.file_list.get(0)
-                    .and_then(|p| p.parent())
-                    .map(|p| p.to_path_buf())
-                    .unwrap_or_else(|| PathBuf::from("."));
-
-                app.update_file_list(current_dir);
-            }
+            KeyCode::Char('j') => app.file_tree_next(),
+            KeyCode::Char('k') => app.file_tree_prev(),
+            KeyCode::Enter => app.file_tree_select(),
+            KeyCode::Backspace | KeyCode::Char('h') => app.file_tree_parent(),
             _ => {}
         }
     }

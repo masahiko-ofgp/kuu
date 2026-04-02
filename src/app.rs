@@ -473,6 +473,45 @@ impl App {
         }
     }
 
+    pub fn file_tree_next(&mut self) {
+        if self.file_list_selected < self.file_list.len().saturating_sub(1) {
+            self.file_list_selected += 1;
+        }
+    }
+
+    pub fn file_tree_prev(&mut self) {
+        if self.file_list_selected > 0 {
+            self.file_list_selected -= 1;
+        }
+    }
+
+    pub fn file_tree_parent(&mut self) {
+        if let Some(parent) = self.current_dir.parent() {
+            let parent_path = parent.to_path_buf();
+            self.update_file_list(parent_path);
+        }
+    }
+
+    pub fn file_tree_select(&mut self) {
+        if let Some(path) = self.file_list.get(self.file_list_selected).clone() {
+            if path.is_dir() {
+                self.update_file_list(path.to_path_buf());
+            } else {
+                if self.is_buffer_modified() {
+                    self.status_message = Some("File modified! Save or discord changes first.".to_string());
+                    self.mode = AppMode::Normal;
+                } else {
+                    self.open(path.to_path_buf());
+                    self.mode = AppMode::Normal;
+                    self.status_message = Some("File opend".to_string());
+                }
+            }
+        }
+    }
+
+    pub fn clear_pending(&mut self) {
+        self.pending_cmd = None;
+    }
 
     pub fn scroll(&mut self, terminal_height: usize) {
         if self.cursor_y < self.row_offset {

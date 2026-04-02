@@ -10,8 +10,18 @@ impl KeyHandler for EmacsHandler {
             app.mode = AppMode::Insert;
         }
 
+        if app.mode == AppMode::FileTree {
+            self.handle_file_tree(key, app);
+            return;
+        }
+
+        if let Some(prefix) = app.pending_cmd {
+            self.handle_prefix_codes(prefix, key, app);
+            return;
+        }
+
         if key.modifiers.contains(KeyModifiers::CONTROL) {
-            self.handle_control_codes(key.code, app);
+            self.handle_control_codes(key, app);
         } else if key.modifiers.contains(KeyModifiers::ALT) {
             self.handle_alt_codes(key.code, app);
         } else {
@@ -21,8 +31,9 @@ impl KeyHandler for EmacsHandler {
 }
 
 impl EmacsHandler {
-    fn handle_control_codes(&self, code: KeyCode, app: &mut App) {
-        match code {
+    fn handle_control_codes(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('x') => app.pending_cmd = Some('x'),
             KeyCode::Char('p') => app.move_cursor_up(),
             KeyCode::Char('n') => app.move_cursor_down(),
             KeyCode::Char('b') => app.move_cursor_left(),
@@ -43,6 +54,7 @@ impl EmacsHandler {
             KeyCode::Char('g') => app.mode = AppMode::Quit,
             KeyCode::Char('h') => app.handle_backspace(),
             KeyCode::Char('l') => app.center_cursor(),
+            KeyCode::Char('v') => app.scroll_half_page_down(),
             _ => {}
         }
     }
@@ -61,6 +73,7 @@ impl EmacsHandler {
                 app.cursor_x = 0;
                 app.snap_cursor();
             }
+            KeyCode::Char('v') => app.scroll_half_page_up(),
             _ => {}
         }
     }
@@ -72,6 +85,33 @@ impl EmacsHandler {
             KeyCode::Char(c) => {
                 app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
                 app.cursor_x += 1;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_prefix_codes(&self, prefix: char, key: KeyEvent, app: &mut App)
+    {
+        app.clear_pending();
+
+        match (prefix, key.code) {
+            ('x', KeyCode::Char('d')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.mode = AppMode::FileTree;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_file_tree(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('j') => app.file_tree_next(),
+            KeyCode::Char('k') => app.file_tree_prev(),
+            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => app.file_tree_next(),
+            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => app.file_tree_prev(),
+            KeyCode::Enter | KeyCode::Char('f') => app.file_tree_select(),
+            KeyCode::Char('^') => app.file_tree_parent(),
+            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.mode = AppMode::Insert;
             }
             _ => {}
         }
