@@ -79,6 +79,71 @@ impl App {
         app
     }
 
+    pub fn get_config_path(&self) -> PathBuf {
+        if let Ok(home) = std::env::var("HOME") {
+            let config_dir = PathBuf::from(home)
+                .join(".config")
+                .join("kuu");
+            let config_file = config_dir.join("config.toml");
+            if config_file.exists() {
+                return config_file;
+            }
+        }
+
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(parent) = exe_path.parent() {
+                let config_file = parent.join("config.toml");
+                if config_file.exists() {
+                    return config_file;
+                }
+            }
+        }
+        PathBuf::from("config.toml")
+    }
+
+    pub fn open_config(&mut self) {
+        let path = self.get_config_path();
+
+        if self.is_buffer_modified() {
+            self.status_message = Some("Save current changes first!".to_string());
+            return;
+        }
+
+        if path.exists() {
+            self.open(path);
+            self.status_message = Some("Editing config.toml".to_string());
+        } else {
+            self.status_message = Some("config.toml not found, Create it first?".to_string());
+        }
+    }
+
+    pub fn reload_config(&mut self) {
+        let config_path = self.get_config_path();
+
+        let is_config = self.file_path.as_ref()
+            .map(|p| p.canonicalize().ok() == config_path.canonicalize().ok())
+                .unwrap_or(false);
+
+        if is_config {
+            let content = self.buffer.as_full_text();
+
+            match toml::from_str::<Config>(&content) {
+                Ok(new_config) => {
+                    self.config = new_config;
+                    self.status_message = Some("Config reloaded and applied!".to_string());
+                }
+                Err(e) => {
+                    self.status_message = Some(format!("Config Error: {}", e));
+                }
+            }
+        }
+    }
+
+    pub fn save_and_reload(&mut self) {
+        self.save();
+        self.reload_config();
+    }
+
     pub fn update_file_list(&mut self, path: PathBuf) {
         let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
             if abs_path.is_dir() {
@@ -115,9 +180,8 @@ impl App {
         self.editor_viewport_height = height;
     }
 
-    // TODO: This is placefolder.
     pub fn is_buffer_modified(&self) -> bool {
-        false
+        self.buffer.modified
     }
 
     pub fn with_file(mut self, path: PathBuf) -> Self {

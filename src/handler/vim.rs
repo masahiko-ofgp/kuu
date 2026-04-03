@@ -150,7 +150,7 @@ impl VimHandler {
                         if parts.len() > 1 {
                             app.file_path = Some(PathBuf::from(parts[1]));
                         }
-                        let _ = app.save();
+                        let _ = app.save_and_reload();
                         app.mode = AppMode::Normal;
                     },
                     "q" | "quit" => {
@@ -165,7 +165,7 @@ impl VimHandler {
                         app.mode = AppMode::Quit;
                     }
                     "wq" => {
-                        let _ = app.save();
+                        let _ = app.save_and_reload();
                         app.mode = AppMode::Quit;
                     },
                     "e" | "edit" => {
@@ -178,6 +178,7 @@ impl VimHandler {
                         app.show_file_tree = !app.show_file_tree;
                         app.mode = AppMode::FileTree;
                     }
+                    "config" => app.open_config(),
                     _ => {
                         app.mode = AppMode::Normal;
                     }

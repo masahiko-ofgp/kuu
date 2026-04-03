@@ -6,6 +6,7 @@ use std::path::Path;
 pub struct Buffer {
     pub lines: Vec<String>,
     pub full_text_cache: Option<String>,
+    pub modified: bool,
     is_dirty: bool,
 }
 
@@ -14,6 +15,7 @@ impl Buffer {
         Self {
             lines: vec![String::new()],
             full_text_cache: None,
+            modified: false,
             is_dirty: true,
         }
     }
@@ -35,6 +37,7 @@ impl Buffer {
         Ok(Self {
             lines,
             full_text_cache: Some(initial_cache),
+            modified: false,
             is_dirty: false,
         })
     }
@@ -56,6 +59,7 @@ impl Buffer {
     pub fn mark_dirty(&mut self) {
         self.is_dirty = true;
         self.full_text_cache = None;
+        self.modified = true;
     }
 
     pub fn insert_char(&mut self, row: usize, col: usize, ch: char) {

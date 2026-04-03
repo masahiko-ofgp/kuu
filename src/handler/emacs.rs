@@ -86,6 +86,9 @@ impl EmacsHandler {
                 app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
                 app.cursor_x += 1;
             }
+            KeyCode::Esc => {
+                app.mode = AppMode::Normal;
+            }
             _ => {}
         }
     }
@@ -98,7 +101,19 @@ impl EmacsHandler {
             ('x', KeyCode::Char('d')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.mode = AppMode::FileTree;
             }
-            _ => {}
+            ('x',KeyCode::Char('s')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.save();
+                app.reload_config();
+            }
+            ('x', KeyCode::Char('c')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.mode = AppMode::Quit;
+            }
+            ('x', KeyCode::Char('k')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.open_config();
+            }
+            _ => {
+                app.status_message = Some(format!("C-{} {} is undefined", prefix, key.code));
+            }
         }
     }
 
