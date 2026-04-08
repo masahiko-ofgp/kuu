@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crate::app::{App, AppMode};
+use crate::app::{App, AppMode, ConfirmAction};
 use super::KeyHandler;
 use std::path::{PathBuf};
 
@@ -13,6 +13,7 @@ impl KeyHandler for VimHandler {
             AppMode::Insert => self.handle_insert(key, app),
             AppMode::Command => self.handle_command(key, app),
             AppMode::FileTree => self.handle_file_tree(key, app),
+            AppMode::Confirm => self.handle_confirm(key, app),
             _ => {}
         }
     }
@@ -40,6 +41,7 @@ impl VimHandler {
         }
         match key.code {
             KeyCode::Char('i') => app.mode = AppMode::Insert,
+            KeyCode::Char('x') => app.buffer.delete_char(app.cursor_y, app.cursor_x),
             KeyCode::Char('h') => app.move_cursor_left(),
             KeyCode::Char('j') => app.move_cursor_down(),
             KeyCode::Char('k') => app.move_cursor_up(),
@@ -50,7 +52,10 @@ impl VimHandler {
             KeyCode::Char('b') => app.move_word_backward(),
             KeyCode::Char('0') => app.cursor_x = 0,
             KeyCode::Char('$') => {
-                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count().saturating_sub(1);
+                app.cursor_x = app.buffer.lines[app.cursor_y]
+                    .chars()
+                    .count()
+                    .saturating_sub(1);
             }
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
@@ -154,12 +159,18 @@ impl VimHandler {
                         app.mode = AppMode::Normal;
                     },
                     "q" | "quit" => {
-                        if app.file_path.is_some() || !app.buffer.lines.is_empty() && app.buffer.lines != vec![""] {
+                        if app.is_buffer_modified() {
+                            app.request_confirm("Discord unsaved changes?", ConfirmAction::Quit);
+                        } else {
+                            app.mode = AppMode::Quit;
+                        }
+
+                        /*if app.file_path.is_some() || !app.buffer.lines.is_empty() && app.buffer.lines != vec![""] {
                             app.close_file();
                             app.mode = AppMode::Normal;
                         } else {
                             app.mode = AppMode::Quit;
-                        }
+                        }*/
                     },
                     "q!" => {
                         app.mode = AppMode::Quit;
@@ -174,6 +185,7 @@ impl VimHandler {
                             app.mode = AppMode::Normal;
                         }
                     },
+                    "close" => app.close_file(),
                     "t" | "tree" => {
                         app.show_file_tree = !app.show_file_tree;
                         app.mode = AppMode::FileTree;
@@ -207,6 +219,18 @@ impl VimHandler {
             KeyCode::Char('k') => app.file_tree_prev(),
             KeyCode::Enter => app.file_tree_select(),
             KeyCode::Backspace | KeyCode::Char('h') => app.file_tree_parent(),
+            _ => {}
+        }
+    }
+
+    fn handle_confirm(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                app.confirm_action();
+            }
+            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                app.cancel_confirm();
+            }
             _ => {}
         }
     }

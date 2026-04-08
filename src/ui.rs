@@ -191,32 +191,36 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let lang_name = app.highlighter.current_language_name()
         .unwrap_or("Plain Text");
 
-    let vim_status_text = format!("[{:?}]|ROW:{}COL:{}|FILE: {}|{}|{}",
+    let vim_status_text = format!("[{:?}]|ROW:{}COL:{}|FILE: {}|{}",
         app.mode,
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
-        app.show_status_message(),
         );
-    let other_status_text = format!("ROW:{}COL:{}|FILE:{}|{}|{}",
+    let other_status_text = format!("ROW:{}COL:{}|FILE:{}|{}",
         app.cursor_y + 1,
         app.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
-        app.show_status_message(),
         );
 
     if app.config.key_bind_mode == KeyBindMode::Vim {
         let status_bar = Paragraph::new(vim_status_text)
-            .style(Style::default().bg(Color::Cyan).fg(Color::White));
+            .style(Style::default()
+                .bg(if app.is_buffer_modified() { Color::White } else { Color::Indexed(046) })
+                .fg(if app.is_buffer_modified() { Color::Red } else { Color::Black })
+                .add_modifier(Modifier::BOLD));
 
         f.render_widget(status_bar, main_chunks[1]);
     } else {
         let status_bar = Paragraph::new(other_status_text)
-            .style(Style::default().bg(Color::White).fg(Color::Cyan));
+            .style(Style::default()
+                .bg(if app.is_buffer_modified() { Color::White } else { Color::Indexed(069) })
+                .fg(if app.is_buffer_modified() { Color::Red } else { Color::White })
+                .add_modifier(Modifier::BOLD));
 
         f.render_widget(status_bar, main_chunks[1]);
     }
@@ -234,6 +238,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             });
         }
     }
+
     // Command line
     //
     match app.mode {
@@ -251,15 +256,29 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 y: main_chunks[2].y,
             });
         }
+        AppMode::Confirm => {
+            let confirm_text = app.status_message.as_deref().unwrap_or("Confirm? (y/n)");
+            let confirm_display_width = UnicodeWidthStr::width(confirm_text);
+            f.render_widget(
+                Paragraph::new(confirm_text).style(
+                    Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)),
+                main_chunks[2]
+                );
+            f.set_cursor_position(Position {
+                x: main_chunks[2].x + (confirm_display_width + 1) as u16,
+                y: main_chunks[2].y,
+            });
+        }
         _ => {
-            f.render_widget(Paragraph::new(""), main_chunks[2]);
-            if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
-                let cursor_x_display = current_line
-                    .chars()
-                    .take(app.cursor_x)
-                    .collect::<String>()
-                    .width();
+            if let Some(ref msg) = app.status_message {
+                f.render_widget(Paragraph::new(msg.as_str()), main_chunks[2]);
+            }
 
+            if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
+                let cursor_x_display = UnicodeWidthStr::width(&current_line[..app.cursor_x]);
                 f.set_cursor_position(Position {
                     x: inner_editor_area.x + cursor_x_display as u16,
                     y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,

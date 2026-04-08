@@ -20,12 +20,20 @@ pub enum KeyBindMode {
     Emacs,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum ConfirmAction {
+    Quit,
+    OpenFile(PathBuf),
+    CloseFile,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
     Normal,
     Insert,
     Command,
     FileTree,
+    Confirm,
     Quit,
 }
 
@@ -40,6 +48,7 @@ pub struct App {
     pub command_input: String,
     pub highlighter: Highlighter,
     pub status_message: Option<String>,
+    pub pending_confirm_action: Option<ConfirmAction>,
     pub pending_cmd: Option<char>,
     pub yank_register: Option<String>,
     pub file_list: Vec<PathBuf>,
@@ -66,6 +75,7 @@ impl App {
             command_input: String::new(),
             highlighter: Highlighter::new(),
             status_message: None,
+            pending_confirm_action: None,
             pending_cmd: None,
             yank_register: None,
             file_list: Vec::new(),
@@ -140,10 +150,42 @@ impl App {
     }
 
     pub fn save_and_reload(&mut self) {
-        self.save();
+        let _ = self.save();
         self.reload_config();
     }
 
+    pub fn request_confirm(&mut self, message: &str, action: ConfirmAction)
+    {
+        self.status_message = Some(format!("{} (y/n): ", message));
+        self.pending_confirm_action = Some(action);
+        self.mode = AppMode::Confirm;
+    }
+
+    pub fn confirm_action(&mut self) {
+        if let Some(action) = self.pending_confirm_action.take() {
+            match action {
+                ConfirmAction::Quit => self.mode = AppMode::Quit,
+                ConfirmAction::OpenFile(path) => {
+                    self.open(path);
+                    self.mode = AppMode::Normal;
+                }
+                ConfirmAction::CloseFile => {
+                    self.buffer = Buffer::new();
+                    self.file_path = None;
+                    self.cursor_y = 0;
+                    self.cursor_x = 0;
+                    self.mode = AppMode::Normal;
+                }
+            }
+            self.status_message = None;
+        }
+    }
+
+    pub fn cancel_confirm(&mut self) {
+        self.pending_confirm_action = None;
+        self.status_message = Some("Canceled".to_string());
+        self.mode = AppMode::Normal;
+    }
     pub fn update_file_list(&mut self, path: PathBuf) {
         let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
             if abs_path.is_dir() {
@@ -237,7 +279,7 @@ impl App {
         }
     }
 
-    pub fn close_file(&mut self) {
+    pub fn execute_close_file(&mut self) {
         self.buffer = Buffer::new();
         self.file_path = None;
         self.cursor_x = 0;
@@ -247,6 +289,16 @@ impl App {
         self.status_message = Some("File closed".to_string());
     }
 
+    pub fn close_file(&mut self) {
+        if self.is_buffer_modified() {
+            self.request_confirm(
+                "Discord unsaved changes?",
+                ConfirmAction::CloseFile,
+                );
+        } else {
+            self.execute_close_file();
+        }
+    }
     pub fn move_cursor_left(&mut self) {
         if self.cursor_x > 0 {
             self.cursor_x -= 1;
@@ -562,8 +614,10 @@ impl App {
                 self.update_file_list(path.to_path_buf());
             } else {
                 if self.is_buffer_modified() {
-                    self.status_message = Some("File modified! Save or discord changes first.".to_string());
-                    self.mode = AppMode::Normal;
+                    self.request_confirm(
+                        "Discord unsaved changes?",
+                        ConfirmAction::OpenFile(path.to_path_buf())
+                        );
                 } else {
                     self.open(path.to_path_buf());
                     self.mode = AppMode::Normal;
@@ -584,13 +638,6 @@ impl App {
 
         if self.cursor_y >= self.row_offset + terminal_height {
             self.row_offset = self.cursor_y - terminal_height + 1;
-        }
-    }
-
-    pub fn show_status_message(&self) -> String {
-        match &self.status_message {
-            Some(s) => s.to_string(),
-            None => "NO MESSAGE".to_string(),
         }
     }
 }

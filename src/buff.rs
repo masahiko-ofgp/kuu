@@ -52,6 +52,7 @@ impl Buffer {
         file.write_all(b"\n")?;
 
         self.is_dirty = false;
+        self.modified = false;
 
         Ok(())
     }

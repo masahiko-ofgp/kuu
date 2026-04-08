@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crate::app::{App, AppMode};
+use crate::app::{App, AppMode, ConfirmAction};
 use super::KeyHandler;
 
 pub struct EmacsHandler;
@@ -12,6 +12,11 @@ impl KeyHandler for EmacsHandler {
 
         if app.mode == AppMode::FileTree {
             self.handle_file_tree(key, app);
+            return;
+        }
+
+        if app.mode == AppMode::Confirm {
+            self.handle_confirm(key, app);
             return;
         }
 
@@ -51,7 +56,13 @@ impl EmacsHandler {
             KeyCode::Char('y') => {
                 app.put_before();
             }
-            KeyCode::Char('g') => app.mode = AppMode::Quit,
+            KeyCode::Char('g') => {
+                if app.is_buffer_modified() {
+                    app.status_message = Some("File modified! Save or discord first.".to_string());
+                } else {
+                    app.mode = AppMode::Quit
+                }
+            }
             KeyCode::Char('h') => app.handle_backspace(),
             KeyCode::Char('l') => app.center_cursor(),
             KeyCode::Char('v') => app.scroll_half_page_down(),
@@ -102,13 +113,22 @@ impl EmacsHandler {
                 app.mode = AppMode::FileTree;
             }
             ('x',KeyCode::Char('s')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                app.save();
-                app.reload_config();
+                app.save_and_reload();
             }
             ('x', KeyCode::Char('c')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                app.mode = AppMode::Quit;
+                if app.is_buffer_modified() {
+                    app.request_confirm(
+                        "Discord unsaved changes?",
+                        ConfirmAction::Quit
+                        );
+                } else {
+                    app.mode = AppMode::Quit;
+                }
             }
             ('x', KeyCode::Char('k')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.close_file();
+            }
+            ('x', KeyCode::Char('e')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.open_config();
             }
             _ => {
@@ -127,6 +147,16 @@ impl EmacsHandler {
             KeyCode::Char('^') => app.file_tree_parent(),
             KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.mode = AppMode::Insert;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_confirm(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('y') | KeyCode::Char('Y') => app.confirm_action(),
+            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.cancel_confirm();
             }
             _ => {}
         }
