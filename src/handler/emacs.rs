@@ -1,6 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crate::app::{App, AppMode, ConfirmAction};
 use super::KeyHandler;
+use std::path::PathBuf;
+
 
 pub struct EmacsHandler;
 
@@ -12,6 +14,11 @@ impl KeyHandler for EmacsHandler {
 
         if app.mode == AppMode::FileTree {
             self.handle_file_tree(key, app);
+            return;
+        }
+
+        if app.mode == AppMode::Command {
+            self.handle_command(key, app);
             return;
         }
 
@@ -85,6 +92,11 @@ impl EmacsHandler {
                 app.snap_cursor();
             }
             KeyCode::Char('v') => app.scroll_half_page_up(),
+            KeyCode::Char('x') => {
+                app.command_input.clear();
+                app.mode = AppMode::Command;
+                app.status_message = None;
+            }
             _ => {}
         }
     }
@@ -128,7 +140,8 @@ impl EmacsHandler {
             ('x', KeyCode::Char('k')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.close_file();
             }
-            ('x', KeyCode::Char('e')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            ('x', KeyCode::Char('f')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // TODO: unimplemented. now only config file
                 app.open_config();
             }
             _ => {
@@ -157,6 +170,53 @@ impl EmacsHandler {
             KeyCode::Char('y') | KeyCode::Char('Y') => app.confirm_action(),
             KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.cancel_confirm();
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_command(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Enter => {
+                let input = app.command_input.trim().to_string();
+                let parts: Vec<&str> = input.split_whitespace().collect();
+                if !parts.is_empty() {
+                    match parts[0] {
+                        "quit" => {
+                            if app.is_buffer_modified() {
+                                app.request_confirm(
+                                    "Discord unsaved changes?",
+                                    ConfirmAction::Quit
+                                    );
+                            } else {
+                                app.mode = AppMode::Quit;
+                            }
+                        }
+                        "kill-buffer" => app.close_file(),
+                        "find-file" => {
+                            if parts.len() > 1 {
+                                app.open(PathBuf::from(parts[1]));
+                            }
+                        }
+                        _ => {
+                            app.status_message = Some(format!("Unknown command: {}", parts[0]));
+                        }
+                    }
+                }
+                app.command_input.clear();
+                if app.mode == AppMode::Command {
+                    app.mode = AppMode::Insert;
+                }
+            }
+            KeyCode::Esc | KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.command_input.clear();
+                app.mode = AppMode::Insert;
+            }
+            KeyCode::Char(c) => {
+                app.command_input.push(c);
+            }
+            KeyCode::Backspace => {
+                app.command_input.pop();
             }
             _ => {}
         }
