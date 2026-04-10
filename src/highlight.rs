@@ -100,15 +100,6 @@ impl Highlighter {
                 let capture_name = config.query
                     .capture_names()[capture.index as usize];
 
-                /*let color = match capture_name {
-                    "keyword" => Color::Cyan,
-                    "function" => Color::Blue,
-                    "string" => Color::Green,
-                    "comment" => Color::Gray,
-                    "type" => Color::Yellow,
-                    "punctuation" => Color::Magenta,
-                    _ => Color::White,
-                };*/
                 let color = if capture_name.starts_with("keyword") {
                     Color::Indexed(80)
                 } else if capture_name.starts_with("function") {

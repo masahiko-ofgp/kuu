@@ -53,9 +53,11 @@ pub struct App {
     pub yank_register: Option<String>,
     pub file_list: Vec<PathBuf>,
     pub file_list_selected: usize,
+    pub file_tree_offset: usize,
     pub show_file_tree: bool,
     pub current_dir: PathBuf,
     pub editor_viewport_height: u16,
+    pub file_viewport_height: u16,
 }
 
 impl App {
@@ -80,9 +82,11 @@ impl App {
             yank_register: None,
             file_list: Vec::new(),
             file_list_selected: 0,
+            file_tree_offset: 0,
             show_file_tree: true,
             current_dir: current_dir.clone(),
             editor_viewport_height: 0,
+            file_viewport_height: 0,
         };
 
         app.update_file_list(current_dir);
@@ -214,8 +218,9 @@ impl App {
             files.sort();
 
             self.file_list.extend(files);
-            self.file_list_selected = 0;
         }
+        self.file_list_selected = 0;
+        self.file_tree_offset = 0;
     }
 
     pub fn update_viewport_height(&mut self, height: u16) {
@@ -592,12 +597,14 @@ impl App {
     pub fn file_tree_next(&mut self) {
         if self.file_list_selected < self.file_list.len().saturating_sub(1) {
             self.file_list_selected += 1;
+            self.scroll_tree();
         }
     }
 
     pub fn file_tree_prev(&mut self) {
         if self.file_list_selected > 0 {
             self.file_list_selected -= 1;
+            self.scroll_tree();
         }
     }
 
@@ -638,6 +645,20 @@ impl App {
 
         if self.cursor_y >= self.row_offset + terminal_height {
             self.row_offset = self.cursor_y - terminal_height + 1;
+        }
+    }
+
+    pub fn scroll_tree(&mut self) {
+        let height = self.file_viewport_height as usize;
+
+        if height == 0 { return; }
+
+        if self.file_list_selected < self.file_tree_offset {
+            self.file_tree_offset = self.file_list_selected;
+        }
+
+        if self.file_list_selected >= self.file_tree_offset + height {
+            self.file_tree_offset = self.file_list_selected - height + 1;
         }
     }
 }

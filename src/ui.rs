@@ -29,9 +29,12 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // --- File tree ---
     if app.show_file_tree {
+        app.file_viewport_height = tree_area.height.saturating_sub(2);
         let items: Vec<ListItem> = app.file_list
             .iter()
             .enumerate()
+            .skip(app.file_tree_offset)
+            .take(app.file_viewport_height as usize)
             .map(|(i, path)| {
                 let is_selected = i == app.file_list_selected;
 
