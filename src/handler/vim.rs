@@ -188,7 +188,12 @@ impl VimHandler {
                     "close" => app.close_file(),
                     "t" | "tree" => {
                         app.show_file_tree = !app.show_file_tree;
-                        app.mode = AppMode::FileTree;
+
+                        if app.show_file_tree {
+                            app.mode = AppMode::FileTree;
+                        } else {
+                            app.mode = AppMode::Normal;
+                        }
                     }
                     "config" => app.open_config(),
                     _ => {
