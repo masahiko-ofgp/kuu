@@ -281,7 +281,10 @@ pub fn render(f: &mut Frame, app: &mut App) {
             }
 
             if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
-                let cursor_x_display = UnicodeWidthStr::width(&current_line[..app.cursor_x]);
+                let prefix: String = current_line.chars()
+                    .take(app.cursor_x)
+                    .collect();
+                let cursor_x_display = UnicodeWidthStr::width(prefix.as_str());
                 f.set_cursor_position(Position {
                     x: inner_editor_area.x + cursor_x_display as u16,
                     y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,
