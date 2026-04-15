@@ -93,30 +93,12 @@ impl App {
         app
     }
 
-    pub fn get_config_path(&self) -> PathBuf {
-        if let Ok(home) = std::env::var("HOME") {
-            let config_dir = PathBuf::from(home)
-                .join(".config")
-                .join("kuu");
-            let config_file = config_dir.join("config.toml");
-            if config_file.exists() {
-                return config_file;
-            }
-        }
 
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(parent) = exe_path.parent() {
-                let config_file = parent.join("config.toml");
-                if config_file.exists() {
-                    return config_file;
-                }
-            }
-        }
-        PathBuf::from("config.toml")
-    }
+    // ========= Config ============
+
 
     pub fn open_config(&mut self) {
-        let path = self.get_config_path();
+        let path = self.config.get_config_path();
 
         if self.is_buffer_modified() {
             self.status_message = Some("Save current changes first!".to_string());
@@ -132,7 +114,7 @@ impl App {
     }
 
     pub fn reload_config(&mut self) {
-        let config_path = self.get_config_path();
+        let config_path = self.config.get_config_path();
 
         let is_config = self.file_path.as_ref()
             .map(|p| p.canonicalize().ok() == config_path.canonicalize().ok())
@@ -153,10 +135,9 @@ impl App {
         }
     }
 
-    pub fn save_and_reload(&mut self) {
-        let _ = self.save();
-        self.reload_config();
-    }
+
+    // ========= Confirm ============
+
 
     pub fn request_confirm(&mut self, message: &str, action: ConfirmAction)
     {
@@ -190,6 +171,11 @@ impl App {
         self.status_message = Some("Canceled".to_string());
         self.mode = AppMode::Normal;
     }
+
+
+    // ========= File Tree ===========
+
+
     pub fn update_file_list(&mut self, path: PathBuf) {
         let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
             if abs_path.is_dir() {
@@ -223,13 +209,61 @@ impl App {
         self.file_tree_offset = 0;
     }
 
-    pub fn update_viewport_height(&mut self, height: u16) {
-        self.editor_viewport_height = height;
+    pub fn file_tree_next(&mut self) {
+        if self.file_list_selected < self.file_list.len().saturating_sub(1) {
+            self.file_list_selected += 1;
+            self.scroll_tree();
+        }
     }
 
-    pub fn is_buffer_modified(&self) -> bool {
-        self.buffer.modified
+    pub fn file_tree_prev(&mut self) {
+        if self.file_list_selected > 0 {
+            self.file_list_selected -= 1;
+            self.scroll_tree();
+        }
     }
+
+    pub fn file_tree_parent(&mut self) {
+        if let Some(parent) = self.current_dir.parent() {
+            let parent_path = parent.to_path_buf();
+            self.update_file_list(parent_path);
+        }
+    }
+
+    pub fn file_tree_select(&mut self) {
+        if let Some(path) = self.file_list.get(self.file_list_selected).clone() {
+            if path.is_dir() {
+                self.update_file_list(path.to_path_buf());
+            } else {
+                if self.is_buffer_modified() {
+                    self.request_confirm(
+                        "Discord unsaved changes?",
+                        ConfirmAction::OpenFile(path.to_path_buf())
+                        );
+                } else {
+                    self.open(path.to_path_buf());
+                    self.mode = AppMode::Normal;
+                    self.status_message = Some("File opend".to_string());
+                }
+            }
+        }
+    }
+
+    pub fn scroll_tree(&mut self) {
+        let height = self.file_viewport_height as usize;
+
+        if height == 0 { return; }
+
+        if self.file_list_selected < self.file_tree_offset {
+            self.file_tree_offset = self.file_list_selected;
+        }
+
+        if self.file_list_selected >= self.file_tree_offset + height {
+            self.file_tree_offset = self.file_list_selected - height + 1;
+        }
+    }
+
+    // =========== File open, close, save ============
 
     pub fn with_file(mut self, path: PathBuf) -> Self {
         match Buffer::load(&path) {
@@ -263,6 +297,11 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    pub fn save_and_reload(&mut self) {
+        let _ = self.save();
+        self.reload_config();
     }
 
     pub fn open(&mut self, path: PathBuf) {
@@ -304,6 +343,11 @@ impl App {
             self.execute_close_file();
         }
     }
+
+
+    // ======= Cursor, Scroll ============
+
+
     pub fn move_cursor_left(&mut self) {
         if self.cursor_x > 0 {
             self.cursor_x -= 1;
@@ -359,6 +403,73 @@ impl App {
         }
     }
 
+    pub fn move_word_forward(&mut self) {
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = self.cursor_x;
+
+            if x >= chars.len() {
+                self.move_to_next_line_start();
+                return;
+            }
+
+            let start_kind = self.get_char_kind(chars[x]);
+
+            while x < chars.len() && self.get_char_kind(chars[x]) == start_kind { x += 1; }
+
+            while x < chars.len() && chars[x].is_whitespace() { x += 1; }
+
+            if x < chars.len() {
+                self.cursor_x = x;
+            } else {
+                self.move_to_next_line_start();
+            }
+            self.snap_cursor();
+        }
+    }
+
+    pub fn move_word_backward(&mut self) {
+        if self.cursor_x == 0 {
+            if self.cursor_y > 0 {
+                self.cursor_y -= 1;
+
+                let len = self.buffer.lines[self.cursor_y].chars().count();
+                self.cursor_x = len.saturating_sub(1);
+            }
+            return;
+        }
+
+        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
+            let chars: Vec<char> = line.chars().collect();
+            let mut x = self.cursor_x.saturating_sub(1);
+
+            while x > 0 && chars[x].is_whitespace() {
+                x -= 1;
+            }
+
+            let kind = self.get_char_kind(chars[x]);
+
+            while x > 0 && self.get_char_kind(chars[x - 1]) == kind {
+                x -= 1;
+            }
+
+            self.cursor_x = x;
+        }
+        self.snap_cursor();
+    }
+
+    fn move_to_next_line_start(&mut self) {
+        if self.cursor_y < self.buffer.lines.len() - 1 {
+            self.cursor_y += 1;
+            let next_line = &self.buffer.lines[self.cursor_y];
+            self.cursor_x = next_line
+                .char_indices()
+                .find(|(_, c)| !c.is_whitespace())
+                .map(|(i, _)| i)
+                .unwrap_or(0);
+        }
+    }
+
     pub fn scroll_half_page_down(&mut self) {
         let h = self.editor_viewport_height;
         let amount = h / 2;
@@ -380,6 +491,24 @@ impl App {
 
         self.row_offset = self.row_offset.saturating_sub(amount);
     }
+
+    pub fn update_viewport_height(&mut self, height: u16) {
+        self.editor_viewport_height = height;
+    }
+
+    pub fn scroll(&mut self, terminal_height: usize) {
+        if self.cursor_y < self.row_offset {
+            self.row_offset = self.cursor_y;
+        }
+
+        if self.cursor_y >= self.row_offset + terminal_height {
+            self.row_offset = self.cursor_y - terminal_height + 1;
+        }
+    }
+
+
+    // ========== Insert, Delete ===========
+
 
     pub fn replace_char(&mut self, c: char) {
         self.buffer.delete_char(self.cursor_y, self.cursor_x);
@@ -517,72 +646,9 @@ impl App {
         self.snap_cursor();
     }
 
-    pub fn move_word_forward(&mut self) {
-        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
-            let chars: Vec<char> = line.chars().collect();
-            let mut x = self.cursor_x;
 
-            if x >= chars.len() {
-                self.move_to_next_line_start();
-                return;
-            }
+    // ===== Helper =======
 
-            let start_kind = self.get_char_kind(chars[x]);
-
-            while x < chars.len() && self.get_char_kind(chars[x]) == start_kind { x += 1; }
-
-            while x < chars.len() && chars[x].is_whitespace() { x += 1; }
-
-            if x < chars.len() {
-                self.cursor_x = x;
-            } else {
-                self.move_to_next_line_start();
-            }
-            self.snap_cursor();
-        }
-    }
-
-    pub fn move_word_backward(&mut self) {
-        if self.cursor_x == 0 {
-            if self.cursor_y > 0 {
-                self.cursor_y -= 1;
-
-                let len = self.buffer.lines[self.cursor_y].chars().count();
-                self.cursor_x = len.saturating_sub(1);
-            }
-            return;
-        }
-
-        if let Some(line) = self.buffer.lines.get(self.cursor_y) {
-            let chars: Vec<char> = line.chars().collect();
-            let mut x = self.cursor_x.saturating_sub(1);
-
-            while x > 0 && chars[x].is_whitespace() {
-                x -= 1;
-            }
-
-            let kind = self.get_char_kind(chars[x]);
-
-            while x > 0 && self.get_char_kind(chars[x - 1]) == kind {
-                x -= 1;
-            }
-
-            self.cursor_x = x;
-        }
-        self.snap_cursor();
-    }
-
-    fn move_to_next_line_start(&mut self) {
-        if self.cursor_y < self.buffer.lines.len() - 1 {
-            self.cursor_y += 1;
-            let next_line = &self.buffer.lines[self.cursor_y];
-            self.cursor_x = next_line
-                .char_indices()
-                .find(|(_, c)| !c.is_whitespace())
-                .map(|(i, _)| i)
-                .unwrap_or(0);
-        }
-    }
 
     fn get_char_kind(&self, c: char) -> CharKind {
         if c.is_whitespace() {
@@ -594,71 +660,12 @@ impl App {
         }
     }
 
-    pub fn file_tree_next(&mut self) {
-        if self.file_list_selected < self.file_list.len().saturating_sub(1) {
-            self.file_list_selected += 1;
-            self.scroll_tree();
-        }
-    }
-
-    pub fn file_tree_prev(&mut self) {
-        if self.file_list_selected > 0 {
-            self.file_list_selected -= 1;
-            self.scroll_tree();
-        }
-    }
-
-    pub fn file_tree_parent(&mut self) {
-        if let Some(parent) = self.current_dir.parent() {
-            let parent_path = parent.to_path_buf();
-            self.update_file_list(parent_path);
-        }
-    }
-
-    pub fn file_tree_select(&mut self) {
-        if let Some(path) = self.file_list.get(self.file_list_selected).clone() {
-            if path.is_dir() {
-                self.update_file_list(path.to_path_buf());
-            } else {
-                if self.is_buffer_modified() {
-                    self.request_confirm(
-                        "Discord unsaved changes?",
-                        ConfirmAction::OpenFile(path.to_path_buf())
-                        );
-                } else {
-                    self.open(path.to_path_buf());
-                    self.mode = AppMode::Normal;
-                    self.status_message = Some("File opend".to_string());
-                }
-            }
-        }
+    pub fn is_buffer_modified(&self) -> bool {
+        self.buffer.modified
     }
 
     pub fn clear_pending(&mut self) {
         self.pending_cmd = None;
     }
 
-    pub fn scroll(&mut self, terminal_height: usize) {
-        if self.cursor_y < self.row_offset {
-            self.row_offset = self.cursor_y;
-        }
-
-        if self.cursor_y >= self.row_offset + terminal_height {
-            self.row_offset = self.cursor_y - terminal_height + 1;
-        }
-    }
-
-    pub fn scroll_tree(&mut self) {
-        let height = self.file_viewport_height as usize;
-
-        if height == 0 { return; }
-
-        if self.file_list_selected < self.file_tree_offset {
-            self.file_tree_offset = self.file_list_selected;
-        }
-
-        if self.file_list_selected >= self.file_tree_offset + height {
-            self.file_tree_offset = self.file_list_selected - height + 1;
-        }
-    }
 }

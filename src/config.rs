@@ -37,4 +37,27 @@ impl Config {
                 Err(_) => Self::default(),
             }
         }
+
+    pub fn get_config_path(&self) -> PathBuf {
+        if let Ok(home) = std::env::var("HOME") {
+            let config_dir = PathBuf::from(home)
+                .join(".config")
+                .join("kuu");
+            let config_file = config_dir.join("config.toml");
+            if config_file.exists() {
+                return config_file;
+            }
+        }
+
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(parent) = exe_path.parent() {
+                let config_file = parent.join("config.toml");
+                if config_file.exists() {
+                    return config_file;
+                }
+            }
+        }
+
+        PathBuf::from("config.toml")
+    }
 }
