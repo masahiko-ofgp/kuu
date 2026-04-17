@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::highlight::Highlighter;
+use crate::history::{HistoryManager, EditAction};
 use std::fs;
 
 
@@ -58,6 +59,7 @@ pub struct App {
     pub current_dir: PathBuf,
     pub editor_viewport_height: u16,
     pub file_viewport_height: u16,
+    pub history: HistoryManager,
 }
 
 impl App {
@@ -87,6 +89,7 @@ impl App {
             current_dir: current_dir.clone(),
             editor_viewport_height: 0,
             file_viewport_height: 0,
+            history: HistoryManager::new(),
         };
 
         app.update_file_list(current_dir);
@@ -320,6 +323,7 @@ impl App {
             self.cursor_x = 0;
             self.cursor_y = 0;
             self.row_offset = 0;
+            self.history.clear();
         }
     }
 
@@ -511,12 +515,23 @@ impl App {
 
 
     pub fn replace_char(&mut self, c: char) {
-        self.buffer.delete_char(self.cursor_y, self.cursor_x);
-        self.buffer.insert_char(self.cursor_y, self.cursor_x, c);
+        self.delete_char();
+        self.insert_char(c);
+    }
+
+    pub fn insert_char(&mut self, c: char) {
+        let line = self.cursor_y;
+        let col = self.cursor_x;
+        self.buffer.insert_char(line, col, c);
+        self.history.push_undo(EditAction::InsertChar { line, col, c });
+        self.cursor_x += 1;
     }
 
     pub fn insert_newline(&mut self) {
-        self.buffer.split_line(self.cursor_y, self.cursor_x);
+        let line = self.cursor_y;
+        let col = self.cursor_x;
+        self.buffer.split_line(line, col);
+        self.history.push_undo(EditAction::InsertNewline { line, col });
         self.cursor_y += 1;
         self.cursor_x = 0;
     }
@@ -524,19 +539,39 @@ impl App {
     pub fn insert_tab(&mut self) {
         let tab_size = self.config.tab_size;
         for _ in 0..tab_size {
-            self.buffer.insert_char(self.cursor_y, self.cursor_x, ' ');
+            self.insert_char(' ');
             self.cursor_x += 1;
+        }
+    }
+
+    pub fn delete_char(&mut self) {
+        let line = self.cursor_y;
+        let col = self.cursor_x;
+
+        if let Some(c) = self.buffer.get_char(line, col) {
+            self.buffer.delete_char(line, col);
+            self.history.push_undo(EditAction::DeleteChar { line, col, c });
+        } else if self.cursor_y < self.buffer.lines.len() - 1 {
+            if let Some(join_point) = self.buffer.join_lines(line) {
+                self.history.push_undo(EditAction::DeleteNewline { line, col: join_point });
+            }
         }
     }
 
     pub fn handle_backspace(&mut self) {
         if self.cursor_x > 0 {
-            self.buffer.delete_char(self.cursor_y, self.cursor_x - 1);
-            self.cursor_x -= 1;
+            let line = self.cursor_y;
+            let col = self.cursor_x - 1;
+            if let Some(c) = self.buffer.get_char(line, col) {
+                self.buffer.delete_char(line, col);
+                self.history.push_undo(EditAction::DeleteChar { line, col, c });
+                self.cursor_x = col;
+            }
         } else if self.cursor_y > 0 {
-            let prev_y = self.cursor_y - 1;
-            if let Some(join_point) = self.buffer.join_lines(prev_y) {
-                self.cursor_y = prev_y;
+            let target_line = self.cursor_y - 1;
+            if let Some(join_point) = self.buffer.join_lines(target_line) {
+                self.history.push_undo(EditAction::DeleteNewline { line: target_line, col: join_point });
+                self.cursor_y = target_line;
                 self.cursor_x = join_point;
             }
         }
@@ -646,6 +681,89 @@ impl App {
         self.snap_cursor();
     }
 
+
+    // ====== Undo, Redo ========
+
+
+    pub fn undo(&mut self) {
+        if let Some(action) = self.history.pop_undo() {
+            let redo_action = action.reverse();
+            self.apply_action_reverse(&action);
+            self.history.push_redo(redo_action);
+            self.status_message = Some("Undo".to_string());
+        }
+    }
+
+    pub fn redo(&mut self) {
+        if let Some(action) = self.history.pop_redo() {
+            let undo_action = action.reverse();
+            self.apply_action(&action);
+            self.history.push_undo_from_redo(undo_action);
+            self.status_message = Some("Redo".to_string());
+        }
+    }
+
+    pub fn apply_action(&mut self, action: &EditAction) {
+        match action {
+            EditAction::InsertChar { line, col, c } => {
+                self.buffer.insert_char(*line, *col, *c);
+                self.cursor_y = *line;
+                self.cursor_x = *col;
+            }
+            EditAction::DeleteChar { line, col, .. } => {
+                self.buffer.delete_char(*line, *col);
+                self.cursor_y = *line;
+                self.cursor_x = *col;
+            }
+            EditAction::InsertNewline { line, .. } => {
+                self.insert_newline();
+                self.cursor_y = *line + 1;
+                self.cursor_x = 0;
+            }
+            EditAction::DeleteNewline { line, col } => {
+                self.buffer.delete_line(*line);
+                self.cursor_y = *line;
+                self.cursor_x = *col;
+            }
+            EditAction::Group(actions) => {
+                for a in actions {
+                    self.apply_action(a);
+                }
+            }
+        }
+        self.buffer.modified = true;
+    }
+
+    pub fn apply_action_reverse(&mut self, action: &EditAction) {
+        match action {
+            EditAction::InsertChar { line, col, .. } => {
+                self.buffer.delete_char(*line, *col);
+                self.cursor_y = *line;
+                self.cursor_x = *col;
+            }
+            EditAction::DeleteChar { line, col, c } => {
+                self.buffer.insert_char(*line, *col, *c);
+                self.cursor_y = *line;
+                self.cursor_x = *col + 1;
+            }
+            EditAction::InsertNewline { line, col } => {
+                self.buffer.delete_line(*line);
+                self.cursor_y = *line;
+                self.cursor_x = *col;
+            }
+            EditAction::DeleteNewline { line, .. } => {
+                self.insert_newline();
+                self.cursor_y = *line + 1;
+                self.cursor_x = 0;
+            }
+            EditAction::Group(actions) => {
+                for a in actions.iter().rev() {
+                    self.apply_action_reverse(a);
+                }
+            }
+        }
+        self.buffer.modified = true;
+    }
 
     // ===== Helper =======
 

@@ -184,6 +184,10 @@ impl Buffer {
         self.full_text_cache.as_ref().unwrap()
     }
 
+    pub fn get_char(&self, row: usize, col: usize) -> Option<char> {
+        self.lines.get(row)?.chars().nth(col)
+    }
+
     fn char_to_byte_idx(&self, y: usize, char_x: usize) -> usize {
         if let Some(line) = self.lines.get(y) {
             line.char_indices()

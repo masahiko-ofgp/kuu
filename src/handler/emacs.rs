@@ -73,6 +73,8 @@ impl EmacsHandler {
             KeyCode::Char('h') => app.handle_backspace(),
             KeyCode::Char('l') => app.center_cursor(),
             KeyCode::Char('v') => app.scroll_half_page_down(),
+            KeyCode::Char('/') => app.undo(),
+            KeyCode::Char('_') if key.modifiers.contains(KeyModifiers::SHIFT) => app.redo(),
             _ => {}
         }
     }

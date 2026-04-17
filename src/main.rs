@@ -5,6 +5,7 @@ mod buff;
 mod handler;
 mod config;
 mod highlight;
+mod history;
 
 use anyhow::Result;
 use app::{App, AppMode};

@@ -40,8 +40,16 @@ impl VimHandler {
             return;
         }
         match key.code {
-            KeyCode::Char('i') => app.mode = AppMode::Insert,
-            KeyCode::Char('x') => app.buffer.delete_char(app.cursor_y, app.cursor_x),
+            KeyCode::Char('i') => {
+                app.history.start_group();
+                app.mode = AppMode::Insert;
+            },
+            KeyCode::Char('x') => app.delete_char(),
+            KeyCode::Char('a') => {
+                app.cursor_x += 1;
+                app.history.start_group();
+                app.mode = AppMode::Insert;
+            },
             KeyCode::Char('h') => app.move_cursor_left(),
             KeyCode::Char('j') => app.move_cursor_down(),
             KeyCode::Char('k') => app.move_cursor_up(),
@@ -90,6 +98,8 @@ impl VimHandler {
             KeyCode::Char('u') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     app.scroll_half_page_up();
+                } else {
+                    app.undo();
                 }
             }
             KeyCode::Char('g') => {
@@ -108,7 +118,11 @@ impl VimHandler {
                 app.pending_cmd = Some('<');
             }
             KeyCode::Char('r') => {
-                app.pending_cmd = Some('r');
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    app.redo();
+                } else {
+                    app.pending_cmd = Some('r');
+                }
             }
             KeyCode::Char('z') => {
                 app.pending_cmd = Some('z');
@@ -122,16 +136,12 @@ impl VimHandler {
             KeyCode::Esc => {
                 app.move_cursor_left();
                 app.mode = AppMode::Normal;
+                app.history.finish_group();
             }
             KeyCode::Enter => app.insert_newline(),
             KeyCode::Backspace => app.handle_backspace(),
-            KeyCode::Char(c) => {
-                app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
-                app.cursor_x += 1;
-            }
-            KeyCode::Tab => {
-                app.insert_tab();
-            }
+            KeyCode::Char(c) => app.insert_char(c),
+            KeyCode::Tab => app.insert_tab(),
             _ => {}
         }
     }
@@ -164,13 +174,6 @@ impl VimHandler {
                         } else {
                             app.mode = AppMode::Quit;
                         }
-
-                        /*if app.file_path.is_some() || !app.buffer.lines.is_empty() && app.buffer.lines != vec![""] {
-                            app.close_file();
-                            app.mode = AppMode::Normal;
-                        } else {
-                            app.mode = AppMode::Quit;
-                        }*/
                     },
                     "q!" => {
                         app.mode = AppMode::Quit;
