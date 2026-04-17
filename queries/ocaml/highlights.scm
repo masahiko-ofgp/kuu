@@ -1,22 +1,25 @@
-["and" "as" "assert" "begin" "class" "constraint" "do" "done" "downto" "effect" "else" "end" "exception" "external" "for" "fun" "function" "functor" "if" "in" "include" "inherit" "initializer" "lazy" "let" "match" "method" "module" "mutable" "new" "nonrec" "object" "of" "open" "private" "rec" "sig" "struct" "then" "to" "try" "val" "virtual" "when" "while" "with"] @keyword
+[
+ "and" "as" "assert" "begin" "class" "constraint" "do" "done" "downto" "effect" "else" "end" "exception" "external" "for" "fun" "function" "functor" "if" "in" "include" "inherit" "initializer" "lazy" "let" "match" "method" "module" "mutable" "new" "nonrec" "object" "of" "open" "private" "rec" "sig" "struct" "then" "to" "try" "val" "virtual" "when" "while" "with"
+] @keyword
 
-["," "." ";" ":" "=" "|" "~" "?" "+" "-" "!" ">" "&""->" ";;" ":>" "+=" ":=" ".."] @punctuation.delimiter
+["," "." ";" ":" "=" "|" "~" "?" "+" "-" "!" ">" "&" "->" ";;" ":>" "+=" ":=" ".."] @punctuation.delimiter
 
-["(" ")" "[" "]" "{" "}" "[|" "|]" "[<" ">]"] @punctuation.bracket
+["(" ")" "[" "]" "{" "}" "[|" "|]" "[<" "[>"] @punctuation.bracket
 
-(object_type ["<" ">"]) @punctuation.bracket
+(object_type ["<" ">"] @punctuation.bracket)
 
 "%" @punctuatuion.special
 
-(attribute ["[@" "]"]) @punctuation.special)
-(item_attribute ["[@@" "]"]) @punctuation.special)
-(floating_attribute ["[@@@" "]"]) @punctuation.special)
+(attribute ["[@" "]"] @punctuation.special)
+(item_attribute ["[@@" "]"] @punctuation.special)
+(floating_attribute ["[@@@" "]"] @punctuation.special)
 (extension ["[%" "]"] @punctuation.special)
 (item_extension ["[%%" "]"] @punctuation.special)
-(quoted_extension ["{%" }] @punctuation.special)
+(quoted_extension ["{%" "}"] @punctuation.special)
 (quoted_item_extension ["{%%" "}"] @punctuation.special)
 
-[(prefix_operator)
+[
+ (prefix_operator)
  (sign_operator)
  (pow_operator)
  (mult_operator)
