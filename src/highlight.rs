@@ -5,7 +5,15 @@ use tree_sitter::{
     StreamingIterator,
     Language,
 };
+
 use tree_sitter_rust;
+
+#[cfg(feature = "lang-ocaml")]
+use tree_sitter_ocaml;
+
+#[cfg(feature = "lang-python")]
+use tree_sitter_python;
+
 use ratatui::style::Color;
 
 
