@@ -23,27 +23,6 @@ impl EditAction {
             }
         }
     }
-
-    pub fn can_merge(&self, new: &EditAction) -> bool {
-        match (self, new) {
-            (Self::Group(actions), _) => {
-                if let Some(last) = actions.last() {
-                    last.can_merge(new)
-                } else {
-                    false
-                }
-            }
-            (Self::InsertChar { line: l1, col: c1, .. },
-             Self::InsertChar { line: l2, col: c2, .. }) => {
-                l1 == l2 && *c2 == *c1 + 1
-            },
-            (Self::DeleteChar { line: l1, col: c1, .. },
-             Self::DeleteChar { line: l2, col: c2, .. }) => {
-                l1 == l2 && *c1 == *c2 + 1
-            },
-            _ => false,
-        }
-    }
 }
 
 pub struct HistoryManager {
@@ -70,11 +49,7 @@ impl HistoryManager {
     pub fn finish_group(&mut self) {
         if let Some(actions) = self.current_group.take() {
             if !actions.is_empty() {
-                if actions.len() == 1 {
-                    self.undo_stack.push(actions[0].clone());
-                } else {
-                    self.undo_stack.push(EditAction::Group(actions));
-                }
+                self.undo_stack.push(EditAction::Group(actions));
             }
         }
     }
@@ -84,25 +59,9 @@ impl HistoryManager {
 
         if let Some(ref mut group) = self.current_group {
             group.push(action);
-            return;
+        } else {
+            self.undo_stack.push(action);
         }
-
-        if let Some(last) = self.undo_stack.last_mut() {
-            if last.can_merge(&action) {
-                match last {
-                    EditAction::Group(vec) => vec.push(action),
-                    _ => {
-                        let old = std::mem::replace(last, EditAction::Group(Vec::new()));
-                        if let EditAction::Group(vec) = last {
-                            vec.push(old);
-                            vec.push(action);
-                        }
-                    }
-                }
-                return;
-            }
-        }
-        self.undo_stack.push(action);
     }
 
     pub fn pop_undo(&mut self) -> Option<EditAction> {

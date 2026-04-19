@@ -687,9 +687,8 @@ impl App {
 
     pub fn undo(&mut self) {
         if let Some(action) = self.history.pop_undo() {
-            let redo_action = action.reverse();
             self.apply_action_reverse(&action);
-            self.history.push_redo(redo_action);
+            self.history.push_redo(action);
             self.status_message = Some("Undo".to_string());
         }
     }
@@ -708,7 +707,8 @@ impl App {
             EditAction::InsertChar { line, col, c } => {
                 self.buffer.insert_char(*line, *col, *c);
                 self.cursor_y = *line;
-                self.cursor_x = *col;
+                //self.cursor_x = *col;
+                self.cursor_x = *col + 1;
             }
             EditAction::DeleteChar { line, col, .. } => {
                 self.buffer.delete_char(*line, *col);

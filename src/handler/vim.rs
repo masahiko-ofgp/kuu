@@ -54,8 +54,14 @@ impl VimHandler {
             KeyCode::Char('j') => app.move_cursor_down(),
             KeyCode::Char('k') => app.move_cursor_up(),
             KeyCode::Char('l') => app.move_cursor_right(),
-            KeyCode::Char('o') => app.open_new_line_below(),
-            KeyCode::Char('O') => app.open_new_line_above(),
+            KeyCode::Char('o') => {
+                app.history.start_group();
+                app.open_new_line_below();
+            },
+            KeyCode::Char('O') => {
+                app.history.start_group();
+                app.open_new_line_above();
+            },
             KeyCode::Char('w') => app.move_word_forward(),
             KeyCode::Char('b') => app.move_word_backward(),
             KeyCode::Char('0') => app.cursor_x = 0,
