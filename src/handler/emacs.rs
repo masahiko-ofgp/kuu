@@ -114,6 +114,10 @@ impl EmacsHandler {
             KeyCode::Esc => {
                 app.mode = AppMode::Normal;
             }
+            KeyCode::Left => app.move_cursor_left(),
+            KeyCode::Down => app.move_cursor_down(),
+            KeyCode::Up => app.move_cursor_up(),
+            KeyCode::Right => app.move_cursor_right(),
             _ => {}
         }
     }

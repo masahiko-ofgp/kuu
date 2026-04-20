@@ -50,6 +50,10 @@ impl VimHandler {
                 app.history.start_group();
                 app.mode = AppMode::Insert;
             },
+            KeyCode::Left => app.move_cursor_left(),
+            KeyCode::Down => app.move_cursor_down(),
+            KeyCode::Up => app.move_cursor_up(),
+            KeyCode::Right => app.move_cursor_right(),
             KeyCode::Char('h') => app.move_cursor_left(),
             KeyCode::Char('j') => app.move_cursor_down(),
             KeyCode::Char('k') => app.move_cursor_up(),
@@ -148,6 +152,10 @@ impl VimHandler {
             KeyCode::Backspace => app.handle_backspace(),
             KeyCode::Char(c) => app.insert_char(c),
             KeyCode::Tab => app.insert_tab(),
+            KeyCode::Left => app.move_cursor_left(),
+            KeyCode::Down => app.move_cursor_down(),
+            KeyCode::Up => app.move_cursor_up(),
+            KeyCode::Right => app.move_cursor_right(),
             _ => {}
         }
     }
