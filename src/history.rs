@@ -78,7 +78,7 @@ impl HistoryManager {
     }
 
     pub fn push_undo_from_redo(&mut self, action: EditAction) {
-        self.redo_stack.push(action);
+        self.undo_stack.push(action);
     }
 
     pub fn clear(&mut self) {
