@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crate::app::{App, AppMode, ConfirmAction};
+use crate::app::{App, AppMode, ConfirmAction, KeyBindMode};
 use super::KeyHandler;
 use std::path::PathBuf;
 
@@ -59,6 +59,14 @@ impl EmacsHandler {
             }
             KeyCode::Char('k') => {
                 app.kill_line();
+                app.history.finish_group();
+            }
+            KeyCode::Char('o') => {
+                let saved_x = app.cursor_x;
+                let saved_y = app.cursor_y;
+                app.insert_newline();
+                app.cursor_x = saved_x;
+                app.cursor_y = saved_y;
             }
             KeyCode::Char('y') => {
                 app.put_before();
@@ -90,13 +98,12 @@ impl EmacsHandler {
             KeyCode::Char('>') => {
                 app.cursor_y = app.buffer.lines.len()
                     .saturating_sub(1);
-                app.cursor_x = 0;
-                app.snap_cursor();
+                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count();
             }
             KeyCode::Char('v') => app.scroll_half_page_up(),
             KeyCode::Char('x') => {
-                app.command_input.clear();
                 app.mode = AppMode::Command;
+                app.command_input.clear();
                 app.status_message = None;
             }
             _ => {}
@@ -107,13 +114,12 @@ impl EmacsHandler {
         match code {
             KeyCode::Enter => app.insert_newline(),
             KeyCode::Backspace => app.handle_backspace(),
-            KeyCode::Char(c) => {
-                app.buffer.insert_char(app.cursor_y, app.cursor_x, c);
-                app.cursor_x += 1;
-            }
+            KeyCode::Char(c) => app.insert_char(c),
             KeyCode::Esc => {
-                app.mode = AppMode::Normal;
+                app.pending_cmd = None;
+                app.status_message = Some("Quit".to_string());
             }
+            KeyCode::Tab => app.insert_tab(),
             KeyCode::Left => app.move_cursor_left(),
             KeyCode::Down => app.move_cursor_down(),
             KeyCode::Up => app.move_cursor_up(),
@@ -147,9 +153,10 @@ impl EmacsHandler {
                 app.close_file();
             }
             ('x', KeyCode::Char('f')) if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // TODO: unimplemented. now only config file
-                app.open_config();
+                app.mode = AppMode::Command;
+                app.command_input = "find-file ".to_string();
             }
+            ('x', KeyCode::Char('u')) => app.undo(),
             _ => {
                 app.status_message = Some(format!("C-{} {} is undefined", prefix, key.code));
             }
@@ -203,6 +210,10 @@ impl EmacsHandler {
                             if parts.len() > 1 {
                                 app.open(PathBuf::from(parts[1]));
                             }
+                        }
+                        "save-buffer" => app.save_and_reload(),
+                        "chkey" => {
+                            app.config.key_bind_mode = KeyBindMode::Vim;
                         }
                         _ => {
                             app.status_message = Some(format!("Unknown command: {}", parts[0]));

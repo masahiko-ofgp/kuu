@@ -625,14 +625,13 @@ impl App {
     }
 
     pub fn delete_current_line(&mut self) {
-        if let Some(line) = self.buffer.lines.get(self.cursor_y).cloned() {
-            self.yank_register = Some(line);
+        let line = self.cursor_y;
+        if let Some(text) = self.buffer.lines.get(line).cloned() {
+            self.buffer.delete_line(line);
+            self.history.push_undo(EditAction::DeleteLine { line, text });
+            self.cursor_y = line.min(self.buffer.lines.len() - 1);
+            self.snap_cursor();
         }
-        let new_len = self.buffer.delete_line(self.cursor_y);
-        if self.cursor_y >= new_len && self.cursor_y > 0 {
-            self.cursor_y = new_len - 1;
-        }
-        self.snap_cursor();
     }
 
     pub fn change_current_line(&mut self) {
@@ -659,7 +658,17 @@ impl App {
     }
 
     pub fn change_to_end_of_line(&mut self) {
-        let tail = self.buffer.truncate_line(self.cursor_y, self.cursor_x);
+        let line = self.cursor_y;
+        let col = self.cursor_x;
+        self.history.start_group();
+        let tail = self.buffer.truncate_line(line, col);
+        for (i, c) in tail.chars().enumerate() {
+            self.history.push_undo(EditAction::DeleteChar {
+                line,
+                col: col + i,
+                c
+            });
+        }
         self.yank_register = Some(tail);
         self.mode = AppMode::Insert;
     }
@@ -667,18 +676,31 @@ impl App {
     pub fn indent_current_line(&mut self) {
         let tab_size = self.config.tab_size;
         let indent = " ".repeat(tab_size);
-
-        self.buffer.prepend_to_line(self.cursor_y, &indent);
+        self.history.start_group();
+        for (i, c) in indent.chars().enumerate() {
+            self.buffer.insert_char(self.cursor_y, i ,c);
+            self.history.push_undo(EditAction::InsertChar { line: self.cursor_y, col: i, c});
+        }
+        self.history.finish_group();
         self.cursor_x = self.buffer.first_non_whitespace_idx(self.cursor_y);
-        self.snap_cursor();
+        //self.snap_cursor();
     }
 
     pub fn unindent_current_line(&mut self) {
         let tab_size = self.config.tab_size;
+        self.history.start_group();
 
-        self.buffer.remove_leading_spaces(self.cursor_y, tab_size);
+        let spaces = self.buffer.remove_leading_spaces(self.cursor_y, tab_size);
+        for _ in 0..spaces {
+            self.history.push_undo(EditAction::DeleteChar {
+                line: self.cursor_y,
+                col: 0,
+                c: ' '
+            });
+        }
+        self.history.finish_group();
         self.cursor_x = self.buffer.first_non_whitespace_idx(self.cursor_y);
-        self.snap_cursor();
+        //self.snap_cursor();
     }
 
 
@@ -690,6 +712,8 @@ impl App {
             self.apply_action_reverse(&action);
             self.history.push_redo(action);
             self.status_message = Some("Undo".to_string());
+        } else {
+            self.status_message = Some("Already at oldest change".to_string());
         }
     }
 
@@ -699,6 +723,8 @@ impl App {
             self.apply_action(&action);
             self.history.push_undo_from_redo(undo_action);
             self.status_message = Some("Redo".to_string());
+        } else {
+            self.status_message = Some("Already at newest change".to_string());
         }
     }
 
@@ -724,6 +750,14 @@ impl App {
                 self.buffer.delete_line(*line);
                 self.cursor_y = *line;
                 self.cursor_x = *col;
+            }
+            EditAction::InsertLine { line, text } => {
+                self.buffer.insert_line_at(*line, text.clone());
+                self.cursor_y = *line;
+            }
+            EditAction::DeleteLine { line, .. } => {
+                self.buffer.delete_line(*line);
+                self.cursor_y = (*line).min(self.buffer.lines.len() - 1);
             }
             EditAction::Group(actions) => {
                 for a in actions {
@@ -755,6 +789,14 @@ impl App {
                 self.insert_newline();
                 self.cursor_y = *line + 1;
                 self.cursor_x = 0;
+            }
+            EditAction::InsertLine { line, .. } => {
+                self.buffer.delete_line(*line);
+                self.cursor_y = (*line).min(self.buffer.lines.len() - 1);
+            }
+            EditAction::DeleteLine { line, text } => {
+                self.buffer.insert_line_at(*line, text.clone());
+                self.cursor_y = *line;
             }
             EditAction::Group(actions) => {
                 for a in actions.iter().rev() {

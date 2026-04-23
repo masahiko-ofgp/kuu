@@ -138,12 +138,12 @@ impl Buffer {
         self.mark_dirty();
     }
 
-    pub fn prepend_to_line(&mut self, row: usize, text: &str) {
+    /*pub fn prepend_to_line(&mut self, row: usize, text: &str) {
         if let Some(line) = self.lines.get_mut(row) {
             line.insert_str(0, text);
             self.mark_dirty();
         }
-    }
+    }*/
 
     pub fn remove_leading_spaces(&mut self, row: usize, n: usize) -> usize
     {

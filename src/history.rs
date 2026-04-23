@@ -4,6 +4,8 @@ pub enum EditAction {
     DeleteChar { line: usize, col: usize, c: char },
     InsertNewline { line: usize, col: usize },
     DeleteNewline { line: usize, col: usize },
+    InsertLine { line: usize, text: String },
+    DeleteLine { line: usize, text: String },
     Group(Vec<EditAction>),
 }
 
@@ -14,6 +16,8 @@ impl EditAction {
             Self::DeleteChar { line, col, c } => Self::InsertChar { line: *line, col: *col, c: *c },
             Self::InsertNewline { line, col } => Self::DeleteNewline { line: *line, col: *col },
             Self::DeleteNewline { line, col } => Self::InsertNewline { line: *line, col: *col },
+            Self::InsertLine { line, text } => Self::DeleteLine { line: *line, text: text.clone() },
+            Self::DeleteLine { line, text } => Self::InsertLine { line: *line, text: text.clone() },
             Self::Group(actions) => {
                 let reversed: Vec<_> = actions.iter()
                     .rev()

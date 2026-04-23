@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crate::app::{App, AppMode, ConfirmAction};
+use crate::app::{App, AppMode, ConfirmAction, KeyBindMode};
 use super::KeyHandler;
 use std::path::{PathBuf};
 
@@ -213,6 +213,10 @@ impl VimHandler {
                         }
                     }
                     "config" => app.open_config(),
+                    "chkey" => {
+                        app.config.key_bind_mode = KeyBindMode::Emacs;
+                        app.mode = AppMode::Insert;
+                    }
                     _ => {
                         app.mode = AppMode::Normal;
                     }
