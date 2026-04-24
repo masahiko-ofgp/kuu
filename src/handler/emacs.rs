@@ -73,7 +73,7 @@ impl EmacsHandler {
             }
             KeyCode::Char('g') => {
                 if app.is_buffer_modified() {
-                    app.status_message = Some("File modified! Save or discord first.".to_string());
+                    app.request_confirm("Discord unsaved changes?", ConfirmAction::Quit);
                 } else {
                     app.mode = AppMode::Quit
                 }
