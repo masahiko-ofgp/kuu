@@ -1,0 +1,15 @@
+---- Kuu Editor Help (Vim mode)---
+
+[Movement]
+
+h,j,k,l  : Move Left, Down, Up, Right
+w, b     : Move Word Forward / Backward
+0, $     : Move to Line Start / End
+gg, G    : Move to Buffer Start / End
+
+
+[Editing]
+
+[Commands]
+
+[System]

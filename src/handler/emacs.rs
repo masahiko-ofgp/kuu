@@ -8,6 +8,11 @@ pub struct EmacsHandler;
 
 impl KeyHandler for EmacsHandler {
     fn handle_key(&self, key: KeyEvent, app: &mut App) {
+        if app.mode == AppMode::Help {
+            self.handle_help_keys(key, app);
+            return;
+        }
+
         if app.mode == AppMode::Normal {
             app.mode = AppMode::Insert;
         }
@@ -54,9 +59,7 @@ impl EmacsHandler {
             KeyCode::Char('e') => {
                 app.cursor_x = app.buffer.lines[app.cursor_y].chars().count();
             }
-            KeyCode::Char('d') => {
-                app.buffer.delete_char(app.cursor_y, app.cursor_x);
-            }
+            KeyCode::Char('d') => app.delete_char(),
             KeyCode::Char('k') => {
                 app.kill_line();
                 app.history.finish_group();
@@ -78,7 +81,7 @@ impl EmacsHandler {
                     app.mode = AppMode::Quit
                 }
             }
-            KeyCode::Char('h') => app.handle_backspace(),
+            KeyCode::Char('h') => app.show_help(),
             KeyCode::Char('l') => app.center_cursor(),
             KeyCode::Char('v') => app.scroll_half_page_down(),
             KeyCode::Char('/') => app.undo(),
@@ -215,6 +218,10 @@ impl EmacsHandler {
                         "chkey" => {
                             app.config.key_bind_mode = KeyBindMode::Vim;
                         }
+                        "help" => {
+                            app.show_help();
+                            app.command_input.clear();
+                        }
                         _ => {
                             app.status_message = Some(format!("Unknown command: {}", parts[0]));
                         }
@@ -234,6 +241,23 @@ impl EmacsHandler {
             }
             KeyCode::Backspace => {
                 app.command_input.pop();
+            }
+            _ => {}
+        }
+    }
+    fn handle_help_keys(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.mode = AppMode::Insert;
+            }
+            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.mode = AppMode::Insert;
+            }
+            KeyCode::Char('n') | KeyCode::Down => {
+                app.help_scroll_offset += 1;
+            }
+            KeyCode::Char('p') | KeyCode::Up => {
+                app.help_scroll_offset = app.help_scroll_offset.saturating_sub(1);
             }
             _ => {}
         }

@@ -275,6 +275,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 y: main_chunks[2].y,
             });
         }
+        AppMode::Help => {
+            render_help_popup(f, app);
+        }
         _ => {
             if let Some(ref msg) = app.status_message {
                 f.render_widget(Paragraph::new(msg.as_str()), main_chunks[2]);
@@ -294,4 +297,50 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
 
+}
+
+fn render_help_popup(f: &mut Frame, app: &App) {
+    let area = f.area();
+
+    let block = Block::default()
+        .title(" Help (Press 'q'or 'Esc' to close) ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .bg(Color::Black);
+
+    let popup_area = centered_rect(80, 80, area);
+
+    f.render_widget(Clear, popup_area);
+
+    let help_lines: Vec<Line> = app.get_help_content()
+        .into_iter()
+        .map(|l| Line::from(Span::raw(l)))
+        .collect();
+
+    let paragraph = Paragraph::new(help_lines)
+        .block(block)
+        .wrap(Wrap { trim: false })
+        .scroll((app.help_scroll_offset as u16, 0));
+
+    f.render_widget(paragraph, popup_area);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }

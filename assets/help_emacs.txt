@@ -1,0 +1,17 @@
+=== Help Kuu Editor (Emacs mode) ===
+
+[Movement]
+
+C-f / C-b   : forward-char / backward-char
+C-p / C-n   : previous-line / next-line
+C-e         : end-of-line
+C-a         : beginning-of-line
+
+[Editing]
+
+C-d         : delete-char
+C-k         : kill-line
+
+[Commands]
+
+[System]

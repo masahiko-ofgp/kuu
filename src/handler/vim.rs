@@ -14,6 +14,7 @@ impl KeyHandler for VimHandler {
             AppMode::Command => self.handle_command(key, app),
             AppMode::FileTree => self.handle_file_tree(key, app),
             AppMode::Confirm => self.handle_confirm(key, app),
+            AppMode::Help => self.handle_help_keys(key, app),
             _ => {}
         }
     }
@@ -213,6 +214,10 @@ impl VimHandler {
                         }
                     }
                     "config" => app.open_config(),
+                    "help" => {
+                        app.show_help();
+                        app.command_input.clear();
+                    },
                     "chkey" => {
                         app.config.key_bind_mode = KeyBindMode::Emacs;
                         app.mode = AppMode::Insert;
@@ -256,6 +261,21 @@ impl VimHandler {
             }
             KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
                 app.cancel_confirm();
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_help_keys(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.mode = AppMode::Insert;
+            }
+            KeyCode::Char('j') => {
+                app.help_scroll_offset += 1;
+            }
+            KeyCode::Char('k') => {
+                app.help_scroll_offset = app.help_scroll_offset.saturating_sub(1);
             }
             _ => {}
         }

@@ -35,6 +35,7 @@ pub enum AppMode {
     Command,
     FileTree,
     Confirm,
+    Help,
     Quit,
 }
 
@@ -60,6 +61,7 @@ pub struct App {
     pub editor_viewport_height: u16,
     pub file_viewport_height: u16,
     pub history: HistoryManager,
+    pub help_scroll_offset: usize,
 }
 
 impl App {
@@ -90,6 +92,7 @@ impl App {
             editor_viewport_height: 0,
             file_viewport_height: 0,
             history: HistoryManager::new(),
+            help_scroll_offset: 0,
         };
 
         app.update_file_list(current_dir);
@@ -138,6 +141,23 @@ impl App {
         }
     }
 
+    // ========= Help ==========
+
+    pub fn show_help(&mut self) {
+        self.mode = AppMode::Help;
+        self.help_scroll_offset = 0;
+        self.status_message = Some("Help Mode: Press Esc or q to close".to_string());
+    }
+
+    pub fn get_help_content(&self) -> Vec<String> {
+        let content = match self.config.key_bind_mode {
+            KeyBindMode::Vim => include_str!("../assets/help_vim.txt"),
+            KeyBindMode::Emacs => include_str!("../assets/help_emacs.txt"),
+        };
+        content.lines()
+            .map(|s| s.to_string())
+            .collect()
+    }
 
     // ========= Confirm ============
 
