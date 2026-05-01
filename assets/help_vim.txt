@@ -1,15 +1,49 @@
 ---- Kuu Editor Help (Vim mode)---
 
-[Movement]
+
+[ Normal Mode ]
 
 h,j,k,l  : Move Left, Down, Up, Right
 w, b     : Move Word Forward / Backward
 0, $     : Move to Line Start / End
 gg, G    : Move to Buffer Start / End
+dd       : Delete Current Line
+>> / <<  : Indent Current Line / Unindent
+cc       : Change Current Line
+r <char> : Replace char
+zz       : Center Cursor
+a        : 
+o        : Open new line below
+O        : Open new line above
+D        : Kill line
+C        : Change to end of line
+yy       : Yank
+p        : Put After
+P        : Put Before
+:        : Change to Command Mode
+C-t      : Move to File Tree
+C-d      : Scroll half page Down
+C-u      : Scroll half page Up
+i        : Change to Insert Mode
 
 
-[Editing]
+[ Command Mode ]
 
-[Commands]
+w, write : Save
+q, quit  : Quit (with confirm)
+q!       : Quit
+wq       : Save and Quit
+e, edit  : Open File
+close    : Close File
+t, tree  : Move to File Tree
+config   : Open Config file
+help     : Help
+chkey    : Change Key Bindings to Emacs
 
-[System]
+
+[ File Tree ]
+
+j, k     : Select Next / Previous
+h        : Move to parent file tree
+Backspace: Move to parent file tree
+q, Esc   : Quit and Change to Normal Mode

@@ -1,17 +1,40 @@
 === Help Kuu Editor (Emacs mode) ===
 
-[Movement]
+[General]
 
-C-f / C-b   : forward-char / backward-char
-C-p / C-n   : previous-line / next-line
-C-e         : end-of-line
-C-a         : beginning-of-line
+C-p / C-n      : Move Up / Down
+C-b / C-f      : Move Left / Right
+C-a / C-e      : Move to Beginning of Line / End of Line
+M-b / M-f      : Move Word Backward / Forward
 
-[Editing]
+C-/ / C-_      : Undo / Redo
+C-l            : Center Cursor
+C-v / M-v      : Page Scroll Down / Up
+M-> / M-<      : End of Buffer / Beginning of Buffer
 
-C-d         : delete-char
-C-k         : kill-line
+C-d            : Delete char
+C-k            : Kill Line
+C-o            : Insert Newline
+C-y            : Put Before
+C-g            : Quit (with confirm)
+C-h            : Help
 
-[Commands]
+C-x + C-d      : Move Cursor to File Tree
+C-x + C-s      : Save
+C-x + C-c      : Quit
+C-x + C-k      : File Close
+C-x + u        : Undo
+M-x            : Change Command Mode
 
-[System]
+[File Tree]
+
+j or C-n       : Select Next File
+k or C-p       : Select Previous File
+^              : Move Parent Directory
+C-g            : Out File Tree
+
+[Help]
+
+q, C-g         : Return to Editor
+n              : Scroll Down
+p              : Scroll Up
