@@ -28,6 +28,12 @@ pub enum ConfirmAction {
     CloseFile,
 }
 
+pub struct SearchResult {
+    pub line_idx: usize,
+    pub char_idx: usize,
+    pub length: usize,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
     Normal,
@@ -36,6 +42,7 @@ pub enum AppMode {
     FileTree,
     Confirm,
     Help,
+    Search,
     Quit,
 }
 
@@ -62,6 +69,9 @@ pub struct App {
     pub file_viewport_height: u16,
     pub history: HistoryManager,
     pub help_scroll_offset: usize,
+    pub search_query: String,
+    pub search_results: Vec<SearchResult>,
+    pub current_search_match_idx: usize,
 }
 
 impl App {
@@ -93,6 +103,9 @@ impl App {
             file_viewport_height: 0,
             history: HistoryManager::new(),
             help_scroll_offset: 0,
+            search_query: String::new(),
+            search_results: Vec::new(),
+            current_search_match_idx: 0,
         };
 
         app.update_file_list(current_dir);
@@ -195,6 +208,39 @@ impl App {
         self.mode = AppMode::Normal;
     }
 
+    // ========= Search ==============
+
+    pub fn execute_search(&mut self) {
+        self.search_results.clear();
+
+        if self.search_query.is_empty() { return; }
+
+        for (y, line) in self.buffer.lines.iter().enumerate() {
+            for (byte_idx, matched_str) in line.match_indices(&self.search_query) {
+                let char_idx = line[..byte_idx].chars().count();
+                let char_len = matched_str.chars().count();
+
+                self.search_results.push(SearchResult {
+                    line_idx: y,
+                    char_idx,
+                    length: char_len,
+                });
+            }
+        }
+
+        if !self.search_results.is_empty() {
+            self.current_search_match_idx = 0;
+            self.jump_to_current_search_result();
+        }
+    }
+
+    pub fn jump_to_current_search_result(&mut self) {
+        if let Some(res) = self.search_results.get(self.current_search_match_idx) {
+            self.cursor_y = res.line_idx;
+            self.cursor_x = res.char_idx;
+            self.snap_cursor();
+        }
+    }
 
     // ========= File Tree ===========
 

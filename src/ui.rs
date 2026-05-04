@@ -146,36 +146,44 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let mut all_lines = Vec::new();
     let mut current_byte = 0;
 
-    for line_str in app.buffer.lines.iter() {
-        let mut spans = Vec::new();
+    for (y_idx, line_str) in app.buffer.lines.iter().enumerate() {
         let line_start_byte = current_byte;
         let line_end_byte = line_start_byte + line_str.len();
 
-        let mut last_pos = line_start_byte;
+        let has_search_hit = !app.search_query.is_empty() && line_str.contains(&app.search_query);
 
-        for h in &highlights {
-            if h.start_byte < line_end_byte &&
-                h.end_byte > line_start_byte {
-                    if h.start_byte > last_pos {
-                        let start = last_pos - line_start_byte;
-                        let end = h.start_byte - line_start_byte;
-                        spans.push(Span::raw(&line_str[start..end]));
+        let spans = if has_search_hit {
+            render_search_line_spans(line_str, app, y_idx)
+        } else {
+            let mut line_spans = Vec::new();
+            let mut last_pos = line_start_byte;
+
+            for h in &highlights {
+                if h.start_byte < line_end_byte &&
+                    h.end_byte > line_start_byte {
+                        if h.start_byte > last_pos {
+                            let start = last_pos - line_start_byte;
+                            let end = h.start_byte - line_start_byte;
+                            line_spans.push(Span::raw(&line_str[start..end]));
+                        }
+                        let h_start = h.start_byte.max(line_start_byte) - line_start_byte;
+                        let h_end = h.end_byte.min(line_end_byte) - line_start_byte;
+                        line_spans.push(Span::styled(
+                                &line_str[h_start..h_end],
+                                Style::default().fg(h.color)
+                                ));
+                        last_pos = h.end_byte.min(line_end_byte);
                     }
-                    let h_start = h.start_byte.max(line_start_byte) - line_start_byte;
-                    let h_end = h.end_byte.min(line_end_byte) - line_start_byte;
-                    spans.push(Span::styled(
-                            &line_str[h_start..h_end],
-                            Style::default().fg(h.color)
-                            ));
-                    last_pos = h.end_byte.min(line_end_byte);
-                }
-        }
-        if last_pos < line_end_byte {
-            spans.push(Span::raw(&line_str[last_pos - line_start_byte..]));
-        }
+            }
+            if last_pos < line_end_byte {
+                line_spans.push(Span::raw(&line_str[last_pos - line_start_byte..]));
+            }
+            line_spans
+        };
         all_lines.push(Line::from(spans));
         current_byte = line_end_byte + 1;
     }
+    
     let display_lines: Vec<Line> = all_lines
         .into_iter()
         .skip(app.row_offset)
@@ -242,8 +250,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }
     }
 
-    // Command line
-    //
     match app.mode {
         AppMode::Command => {
             let cmd_text = format!(":{}", app.command_input);
@@ -277,6 +283,21 @@ pub fn render(f: &mut Frame, app: &mut App) {
         }
         AppMode::Help => {
             render_help_popup(f, app);
+        }
+        AppMode::Search => {
+            let search_prompt = format!("I-search: {}", app.search_query);
+            let search_width = UnicodeWidthStr::width(search_prompt.as_str());
+            f.render_widget(
+                Paragraph::new(search_prompt)
+                .style(Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)),
+                main_chunks[2]
+                );
+            f.set_cursor_position(Position {
+                x: main_chunks[2].x + search_width as u16,
+                y: main_chunks[2].y,
+            });
         }
         _ => {
             if let Some(ref msg) = app.status_message {
@@ -343,4 +364,35 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    let mut last_byte = 0;
+
+    for (byte_idx, matched_str) in line_str.match_indices(&app.search_query) {
+        if byte_idx > last_byte {
+            spans.push(Span::raw(line_str[last_byte..byte_idx].to_string()));
+        }
+
+        let char_idx = line_str[..byte_idx].chars().count();
+
+        let is_current = app.search_results.get(app.current_search_match_idx)
+            .map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
+
+        let style = if is_current {
+            Style::default().bg(Color::Rgb(255, 165, 0)).fg(Color::Black)
+        } else {
+            Style::default().bg(Color::Yellow).fg(Color::Black)
+        };
+
+        spans.push(Span::styled(matched_str.to_string(), style));
+        last_byte = byte_idx + matched_str.len();
+    }
+
+    if last_byte < line_str.len() {
+        spans.push(Span::raw(line_str[last_byte..].to_string()));
+    }
+    spans
+
 }

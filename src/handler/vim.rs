@@ -15,6 +15,7 @@ impl KeyHandler for VimHandler {
             AppMode::FileTree => self.handle_file_tree(key, app),
             AppMode::Confirm => self.handle_confirm(key, app),
             AppMode::Help => self.handle_help_keys(key, app),
+            AppMode::Search => self.handle_search(key, app),
             _ => {}
         }
     }
@@ -79,6 +80,10 @@ impl VimHandler {
             KeyCode::Char(':') => {
                 app.mode = AppMode::Command;
                 app.command_input.clear();
+            }
+            KeyCode::Char('/') => {
+                app.mode = AppMode::Search;
+                app.search_results.clear();
             }
             KeyCode::Char('t') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -276,6 +281,33 @@ impl VimHandler {
             }
             KeyCode::Char('k') => {
                 app.help_scroll_offset = app.help_scroll_offset.saturating_sub(1);
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_search(&self, key: KeyEvent, app: &mut App) {
+        match key.code {
+            KeyCode::Enter => {
+                if !app.search_results.is_empty() {
+                    app.current_search_match_idx = (app.current_search_match_idx + 1) % app.search_results.len();
+                    app.jump_to_current_search_result();
+                    app.status_message = Some(format!("Found {} matches", app.search_results.len()));
+                    app.mode = AppMode::Normal;
+                }
+            }
+            KeyCode::Esc | KeyCode::Char('q') => {
+                app.mode = AppMode::Normal;
+                app.search_results.clear();
+                app.status_message = None;
+            }
+            KeyCode::Char(c) => {
+                app.search_query.push(c);
+                app.execute_search();
+            }
+            KeyCode::Backspace => {
+                app.search_query.pop();
+                app.execute_search();
             }
             _ => {}
         }
