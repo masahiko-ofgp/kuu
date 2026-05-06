@@ -10,7 +10,15 @@ impl KeyHandler for VimHandler {
     fn handle_key(&self, key: KeyEvent, app: &mut App) {
         match app.mode {
             AppMode::Normal => self.handle_normal(key, app),
-            AppMode::Insert => self.handle_insert(key, app),
+            AppMode::Insert => {
+                if app.is_readonly {
+                    app.status_message = Some("Error: File is Read-Only".to_string());
+                    app.mode = AppMode::Normal;
+                    return;
+                } else {
+                    self.handle_insert(key, app);
+                }
+            }
             AppMode::Command => self.handle_command(key, app),
             AppMode::FileTree => self.handle_file_tree(key, app),
             AppMode::Confirm => self.handle_confirm(key, app),

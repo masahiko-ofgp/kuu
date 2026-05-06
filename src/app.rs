@@ -31,7 +31,7 @@ pub enum ConfirmAction {
 pub struct SearchResult {
     pub line_idx: usize,
     pub char_idx: usize,
-    pub length: usize,
+    //pub length: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -72,6 +72,7 @@ pub struct App {
     pub search_query: String,
     pub search_results: Vec<SearchResult>,
     pub current_search_match_idx: usize,
+    pub is_readonly: bool,
 }
 
 impl App {
@@ -106,6 +107,7 @@ impl App {
             search_query: String::new(),
             search_results: Vec::new(),
             current_search_match_idx: 0,
+            is_readonly: false,
         };
 
         app.update_file_list(current_dir);
@@ -216,14 +218,14 @@ impl App {
         if self.search_query.is_empty() { return; }
 
         for (y, line) in self.buffer.lines.iter().enumerate() {
-            for (byte_idx, matched_str) in line.match_indices(&self.search_query) {
+            for (byte_idx, _/*matched_str*/) in line.match_indices(&self.search_query) {
                 let char_idx = line[..byte_idx].chars().count();
-                let char_len = matched_str.chars().count();
+                //let char_len = matched_str.chars().count();
 
                 self.search_results.push(SearchResult {
                     line_idx: y,
                     char_idx,
-                    length: char_len,
+                    //length: char_len,
                 });
             }
         }
@@ -335,6 +337,14 @@ impl App {
     // =========== File open, close, save ============
 
     pub fn with_file(mut self, path: PathBuf) -> Self {
+        let metadata = std::fs::metadata(&path).expect("Could not get file metadata");
+        let permissions = metadata.permissions();
+        self.is_readonly = permissions.readonly();
+
+        if self.is_readonly {
+            self.status_message = Some("READ-ONLY: Editing disabled".to_string());
+        }
+
         match Buffer::load(&path) {
             Ok(buffer) => {
                 self.buffer = buffer;
@@ -374,6 +384,14 @@ impl App {
     }
 
     pub fn open(&mut self, path: PathBuf) {
+        let metadata = std::fs::metadata(&path).expect("Could not get file metadata");
+        let permissions = metadata.permissions();
+        self.is_readonly = permissions.readonly();
+
+        if self.is_readonly {
+            self.status_message = Some("READ-ONLY: Editing disabled".to_string());
+        }
+
         if let Ok(buffer) = Buffer::load(&path) {
             self.buffer = buffer;
             self.file_path = std::fs::canonicalize(&path)

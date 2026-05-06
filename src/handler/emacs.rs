@@ -13,9 +13,9 @@ impl KeyHandler for EmacsHandler {
             return;
         }
 
-        if app.mode == AppMode::Normal {
+        /*if app.mode == AppMode::Normal {
             app.mode = AppMode::Insert;
-        }
+        }*/
 
         if app.mode == AppMode::FileTree {
             self.handle_file_tree(key, app);
@@ -35,6 +35,16 @@ impl KeyHandler for EmacsHandler {
         if app.mode == AppMode::Search {
             self.handle_search_keys(key, app);
             return;
+        }
+
+        if app.mode == AppMode::Normal {
+            if app.is_readonly {
+                app.mode = AppMode::Normal;
+                app.status_message = Some("File is Read-Only".to_string());
+                return;
+            } else {
+                app.mode = AppMode::Insert;
+            }
         }
 
         if let Some(prefix) = app.pending_cmd {
