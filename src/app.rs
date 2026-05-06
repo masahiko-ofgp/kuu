@@ -5,7 +5,7 @@ use crate::config::Config;
 use crate::highlight::Highlighter;
 use crate::history::{HistoryManager, EditAction};
 use std::fs;
-
+use anyhow::Result;
 
 #[derive(PartialEq)]
 enum CharKind {
@@ -31,7 +31,6 @@ pub enum ConfirmAction {
 pub struct SearchResult {
     pub line_idx: usize,
     pub char_idx: usize,
-    //pub length: usize,
 }
 
 #[derive(Debug, PartialEq)]
@@ -218,14 +217,12 @@ impl App {
         if self.search_query.is_empty() { return; }
 
         for (y, line) in self.buffer.lines.iter().enumerate() {
-            for (byte_idx, _/*matched_str*/) in line.match_indices(&self.search_query) {
+            for (byte_idx, _matched_str) in line.match_indices(&self.search_query) {
                 let char_idx = line[..byte_idx].chars().count();
-                //let char_len = matched_str.chars().count();
 
                 self.search_results.push(SearchResult {
                     line_idx: y,
                     char_idx,
-                    //length: char_len,
                 });
             }
         }
@@ -261,10 +258,10 @@ impl App {
         };
 
         if let Ok(entries) = fs::read_dir(&target_dir) {
-            self.current_dir = target_dir.clone();
+            self.current_dir = target_dir;
             self.file_list.clear();
 
-            if let Some(parent) = target_dir.parent() {
+            if let Some(parent) = self.current_dir.parent() {
                 self.file_list.push(parent.to_path_buf());
             }
 
@@ -336,9 +333,11 @@ impl App {
 
     // =========== File open, close, save ============
 
-    pub fn with_file(mut self, path: PathBuf) -> Self {
-        let metadata = std::fs::metadata(&path).expect("Could not get file metadata");
+    pub fn with_file(mut self, path: PathBuf) -> Result<Self> {
+        let metadata = std::fs::metadata(&path)?;
+
         let permissions = metadata.permissions();
+        
         self.is_readonly = permissions.readonly();
 
         if self.is_readonly {
@@ -357,7 +356,7 @@ impl App {
                 self.file_path = Some(path);
             }
         }
-        self
+        Ok(self)
     }
 
     pub fn save(&mut self) -> std::io::Result<()> {
@@ -384,7 +383,13 @@ impl App {
     }
 
     pub fn open(&mut self, path: PathBuf) {
-        let metadata = std::fs::metadata(&path).expect("Could not get file metadata");
+        let metadata = match std::fs::metadata(&path) {
+            Ok(m) => m,
+            Err(e) => {
+                self.status_message = Some(format!("Failed to access file: {}", e));
+                return;
+            }
+        };
         let permissions = metadata.permissions();
         self.is_readonly = permissions.readonly();
 

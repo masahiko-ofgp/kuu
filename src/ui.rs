@@ -374,18 +374,19 @@ fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span
         if byte_idx > last_byte {
             spans.push(Span::raw(line_str[last_byte..byte_idx].to_string()));
         }
-
         let char_idx = line_str[..byte_idx].chars().count();
 
-        let is_current = app.search_results.get(app.current_search_match_idx)
+        let is_current = app.search_results
+            .get(app.current_search_match_idx)
             .map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
 
         let style = if is_current {
-            Style::default().bg(Color::Rgb(255, 165, 0)).fg(Color::Black)
+            Style::default().bg(Color::Rgb(255, 165, 0))
+                .fg(Color::Black)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().bg(Color::Yellow).fg(Color::Black)
         };
-
         spans.push(Span::styled(matched_str.to_string(), style));
         last_byte = byte_idx + matched_str.len();
     }
@@ -394,5 +395,4 @@ fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span
         spans.push(Span::raw(line_str[last_byte..].to_string()));
     }
     spans
-
 }

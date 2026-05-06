@@ -13,10 +13,6 @@ impl KeyHandler for EmacsHandler {
             return;
         }
 
-        /*if app.mode == AppMode::Normal {
-            app.mode = AppMode::Insert;
-        }*/
-
         if app.mode == AppMode::FileTree {
             self.handle_file_tree(key, app);
             return;

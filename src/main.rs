@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     
     let mut app = if args.len() > 1 {
         let app = App::new();
-        let mut app = app.with_file(PathBuf::from(&args[1]));
+        let mut app = app.with_file(PathBuf::from(&args[1]))?;
         app.config = config;
         app
     } else {
