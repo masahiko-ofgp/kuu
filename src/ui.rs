@@ -156,27 +156,50 @@ pub fn render(f: &mut Frame, app: &mut App) {
             render_search_line_spans(line_str, app, y_idx)
         } else {
             let mut line_spans = Vec::new();
-            let mut last_pos = line_start_byte;
+            let mut chars = line_str.char_indices().peekable();
+            let relevant_highlights = highlights.iter()
+                .filter(|h| h.start_byte < line_end_byte && h.end_byte > line_start_byte);
 
-            for h in &highlights {
-                if h.start_byte < line_end_byte &&
-                    h.end_byte > line_start_byte {
-                        if h.start_byte > last_pos {
-                            let start = last_pos - line_start_byte;
-                            let end = h.start_byte - line_start_byte;
-                            line_spans.push(Span::raw(&line_str[start..end]));
-                        }
-                        let h_start = h.start_byte.max(line_start_byte) - line_start_byte;
-                        let h_end = h.end_byte.min(line_end_byte) - line_start_byte;
-                        line_spans.push(Span::styled(
-                                &line_str[h_start..h_end],
-                                Style::default().fg(h.color)
-                                ));
-                        last_pos = h.end_byte.min(line_end_byte);
+            for h in relevant_highlights {
+                let h_start_rel = h.start_byte.saturating_sub(line_start_byte);
+                let h_end_rel = h.end_byte.saturating_sub(line_start_byte);
+                let mut normal_text = String::new();
+
+                while let Some(&(byte_pos, c)) = chars.peek() {
+                    if byte_pos < h_start_rel {
+                        normal_text.push(c);
+                        chars.next();
+                    } else {
+                        break;
                     }
+                }
+
+                if !normal_text.is_empty() {
+                    line_spans.push(Span::raw(normal_text));
+                }
+
+                let mut highlighted_text = String::new();
+
+                while let Some(&(byte_pos, c)) = chars.peek() {
+                    if byte_pos < h_end_rel {
+                        highlighted_text.push(c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+
+                if !highlighted_text.is_empty() {
+                    line_spans.push(Span::styled(highlighted_text, Style::default().fg(h.color)));
+                }
             }
-            if last_pos < line_end_byte {
-                line_spans.push(Span::raw(&line_str[last_pos - line_start_byte..]));
+            let remaining_text: String = chars.map(|(_, c)| c).collect();
+            if !remaining_text.is_empty() {
+                line_spans.push(Span::raw(remaining_text));
+            }
+
+            if line_spans.is_empty() && line_str.is_empty() {
+                line_spans.push(Span::raw(""));
             }
             line_spans
         };
@@ -368,31 +391,50 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
-    let mut last_byte = 0;
+    let mut chars = line_str.char_indices().peekable();
 
-    for (byte_idx, matched_str) in line_str.match_indices(&app.search_query) {
-        if byte_idx > last_byte {
-            spans.push(Span::raw(line_str[last_byte..byte_idx].to_string()));
+    for (match_start_byte, matched_str) in line_str.match_indices(&app.search_query) {
+        let match_end_byte = match_start_byte + matched_str.len();
+        let mut normal_text = String::new();
+
+        while let Some(&(byte_pos, c)) = chars.peek() {
+            if byte_pos < match_start_byte {
+                normal_text.push(c);
+                chars.next();
+            } else {
+                break;
+            }
         }
-        let char_idx = line_str[..byte_idx].chars().count();
+        if !normal_text.is_empty() {
+            spans.push(Span::raw(normal_text));
+        }
 
-        let is_current = app.search_results
-            .get(app.current_search_match_idx)
-            .map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
+        let char_idx = line_str[..match_start_byte].chars().count();
+        let is_current = app.search_results.get(app.current_search_match_idx).map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
 
         let style = if is_current {
-            Style::default().bg(Color::Rgb(255, 165, 0))
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD)
+            Style::default().bg(Color::Rgb(255, 165, 0)).fg(Color::Black)
         } else {
             Style::default().bg(Color::Yellow).fg(Color::Black)
         };
-        spans.push(Span::styled(matched_str.to_string(), style));
-        last_byte = byte_idx + matched_str.len();
+
+        let mut match_text = String::new();
+
+        while let Some(&(byte_pos, c)) = chars.peek() {
+            if byte_pos < match_end_byte {
+                match_text.push(c);
+                chars.next();
+            } else {
+                break;
+            }
+        }
+        spans.push(Span::styled(match_text, style));
+    }
+    let remaining: String = chars.map(|(_, c)| c).collect();
+    
+    if !remaining.is_empty() {
+        spans.push(Span::raw(remaining));
     }
 
-    if last_byte < line_str.len() {
-        spans.push(Span::raw(line_str[last_byte..].to_string()));
-    }
     spans
 }
