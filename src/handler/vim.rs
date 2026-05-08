@@ -91,7 +91,7 @@ impl VimHandler {
             }
             KeyCode::Char('/') => {
                 app.mode = AppMode::Search;
-                app.search_results.clear();
+                app.search.results.clear();
             }
             KeyCode::Char('t') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -280,12 +280,18 @@ impl VimHandler {
     }
 
     fn handle_help_keys(&self, key: KeyEvent, app: &mut App) {
+        let help_content = app.get_help_content();
+        let total_lines = help_content.len();
+        let visible_height = ((app.file_viewport_height as f32 / 0.8) * 0.8) as usize;
+        let max_offset = total_lines.saturating_sub(visible_height);
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 app.mode = AppMode::Insert;
             }
             KeyCode::Char('j') => {
-                app.help_scroll_offset += 1;
+                if app.help_scroll_offset < max_offset {
+                    app.help_scroll_offset += 1;
+                }
             }
             KeyCode::Char('k') => {
                 app.help_scroll_offset = app.help_scroll_offset.saturating_sub(1);
@@ -297,24 +303,24 @@ impl VimHandler {
     fn handle_search(&self, key: KeyEvent, app: &mut App) {
         match key.code {
             KeyCode::Enter => {
-                if !app.search_results.is_empty() {
-                    app.current_search_match_idx = (app.current_search_match_idx + 1) % app.search_results.len();
+                if !app.search.results.is_empty() {
+                    app.search.current_match_idx = (app.search.current_match_idx + 1) % app.search.results.len();
                     app.jump_to_current_search_result();
-                    app.status_message = Some(format!("Found {} matches", app.search_results.len()));
+                    app.status_message = Some(format!("Found {} matches", app.search.results.len()));
                     app.mode = AppMode::Normal;
                 }
             }
             KeyCode::Esc | KeyCode::Char('q') => {
                 app.mode = AppMode::Normal;
-                app.search_results.clear();
+                app.search.clear();
                 app.status_message = None;
             }
             KeyCode::Char(c) => {
-                app.search_query.push(c);
+                app.search.query.push(c);
                 app.execute_search();
             }
             KeyCode::Backspace => {
-                app.search_query.pop();
+                app.search.query.pop();
                 app.execute_search();
             }
             _ => {}

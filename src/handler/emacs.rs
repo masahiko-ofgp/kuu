@@ -99,7 +99,7 @@ impl EmacsHandler {
             KeyCode::Char('_') if key.modifiers.contains(KeyModifiers::SHIFT) => app.redo(),
             KeyCode::Char('s') => {
                 app.mode = AppMode::Search;
-                app.search_query.clear();
+                app.search.clear();
                 app.status_message = Some("Search: ".to_string());
             }
             _ => {}
@@ -263,6 +263,10 @@ impl EmacsHandler {
     }
     
     fn handle_help_keys(&self, key: KeyEvent, app: &mut App) {
+        let help_content = app.get_help_content();
+        let total_lines = help_content.len();
+        let visible_height = ((app.file_viewport_height as f32 / 0.8) * 0.8) as usize;
+        let max_offset = total_lines.saturating_sub(visible_height);
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => {
                 app.mode = AppMode::Insert;
@@ -271,7 +275,9 @@ impl EmacsHandler {
                     app.mode = AppMode::Insert;
             }
             KeyCode::Char('n') | KeyCode::Down => {
-                app.help_scroll_offset += 1;
+                if app.help_scroll_offset < max_offset {
+                    app.help_scroll_offset += 1;
+                }
             }
             KeyCode::Char('p') | KeyCode::Up => {
                 app.help_scroll_offset = app.help_scroll_offset.saturating_sub(1);
@@ -284,25 +290,25 @@ impl EmacsHandler {
         match key.code {
             KeyCode::Enter => {
                 app.mode = AppMode::Insert;
-                app.status_message = Some(format!("Found {} matches", app.search_results.len()));
+                app.status_message = Some(format!("Found {} matches", app.search.results.len()));
             }
             KeyCode::Esc | KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.mode = AppMode::Insert;
-                app.search_results.clear();
+                app.search.clear();
                 app.status_message = None;
             }
             KeyCode::Backspace => {
-                app.search_query.pop();
+                app.search.query.pop();
                 app.execute_search();
             }
             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                if !app.search_results.is_empty() {
-                    app.current_search_match_idx = (app.current_search_match_idx + 1) % app.search_results.len();
+                if !app.search.results.is_empty() {
+                    app.search.current_match_idx = (app.search.current_match_idx + 1) % app.search.results.len();
                     app.jump_to_current_search_result();
                 }
             }
             KeyCode::Char(c) => {
-                app.search_query.push(c);
+                app.search.query.push(c);
                 app.execute_search();
             }
             _ => {}

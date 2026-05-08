@@ -150,7 +150,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         let line_start_byte = current_byte;
         let line_end_byte = line_start_byte + line_str.len();
 
-        let has_search_hit = !app.search_query.is_empty() && line_str.contains(&app.search_query);
+        let has_search_hit = !app.search.query.is_empty() && line_str.contains(&app.search.query);
 
         let spans = if has_search_hit {
             render_search_line_spans(line_str, app, y_idx)
@@ -308,7 +308,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             render_help_popup(f, app);
         }
         AppMode::Search => {
-            let search_prompt = format!("I-search: {}", app.search_query);
+            let search_prompt = format!("I-search: {}", app.search.query);
             let search_width = UnicodeWidthStr::width(search_prompt.as_str());
             f.render_widget(
                 Paragraph::new(search_prompt)
@@ -393,7 +393,7 @@ fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span
     let mut spans = Vec::new();
     let mut chars = line_str.char_indices().peekable();
 
-    for (match_start_byte, matched_str) in line_str.match_indices(&app.search_query) {
+    for (match_start_byte, matched_str) in line_str.match_indices(&app.search.query) {
         let match_end_byte = match_start_byte + matched_str.len();
         let mut normal_text = String::new();
 
@@ -410,7 +410,7 @@ fn render_search_line_spans(line_str: &str, app: &App, y_idx: usize) -> Vec<Span
         }
 
         let char_idx = line_str[..match_start_byte].chars().count();
-        let is_current = app.search_results.get(app.current_search_match_idx).map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
+        let is_current = app.search.results.get(app.search.current_match_idx).map_or(false, |m| m.line_idx == y_idx && m.char_idx == char_idx);
 
         let style = if is_current {
             Style::default().bg(Color::Rgb(255, 165, 0)).fg(Color::Black)

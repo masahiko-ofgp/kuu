@@ -33,6 +33,28 @@ pub struct SearchResult {
     pub char_idx: usize,
 }
 
+pub struct SearchState {
+    pub query: String,
+    pub results: Vec<SearchResult>,
+    pub current_match_idx: usize,
+}
+
+impl SearchState {
+    pub fn new() -> Self {
+        Self {
+            query: String::new(),
+            results: Vec::new(),
+            current_match_idx: 0,
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.query.clear();
+        self.results.clear();
+        self.current_match_idx = 0;
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
     Normal,
@@ -68,9 +90,7 @@ pub struct App {
     pub file_viewport_height: u16,
     pub history: HistoryManager,
     pub help_scroll_offset: usize,
-    pub search_query: String,
-    pub search_results: Vec<SearchResult>,
-    pub current_search_match_idx: usize,
+    pub search: SearchState,
     pub is_readonly: bool,
 }
 
@@ -103,9 +123,7 @@ impl App {
             file_viewport_height: 0,
             history: HistoryManager::new(),
             help_scroll_offset: 0,
-            search_query: String::new(),
-            search_results: Vec::new(),
-            current_search_match_idx: 0,
+            search: SearchState::new(),
             is_readonly: false,
         };
 
@@ -212,29 +230,27 @@ impl App {
     // ========= Search ==============
 
     pub fn execute_search(&mut self) {
-        self.search_results.clear();
+        self.search.results.clear();
 
-        if self.search_query.is_empty() { return; }
+        if self.search.query.is_empty() { return; }
 
         for (y, line) in self.buffer.lines.iter().enumerate() {
-            for (byte_idx, _matched_str) in line.match_indices(&self.search_query) {
+            for (byte_idx, _matched_str) in line.match_indices(&self.search.query) {
                 let char_idx = line[..byte_idx].chars().count();
 
-                self.search_results.push(SearchResult {
+                self.search.results.push(SearchResult {
                     line_idx: y,
                     char_idx,
                 });
             }
         }
 
-        if !self.search_results.is_empty() {
-            self.current_search_match_idx = 0;
-            self.jump_to_current_search_result();
-        }
+        self.search.current_match_idx = 0;
+        self.jump_to_current_search_result();
     }
 
     pub fn jump_to_current_search_result(&mut self) {
-        if let Some(res) = self.search_results.get(self.current_search_match_idx) {
+        if let Some(res) = self.search.results.get(self.search.current_match_idx) {
             self.cursor_y = res.line_idx;
             self.cursor_x = res.char_idx;
             self.snap_cursor();

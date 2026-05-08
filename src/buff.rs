@@ -119,14 +119,14 @@ impl Buffer {
         }
     }
 
-    pub fn delete_line(&mut self, y: usize) -> usize {
-        if self.lines.len() > 1 {
+    pub fn delete_line(&mut self, y: usize) {
+        if self.lines.len() > 1 && y < self.lines.len() {
             self.lines.remove(y);
-        } else {
-            self.lines[0].clear();
+            self.mark_dirty();
+        } else if y == 0 {
+            self.lines[0] = String::new();
+            self.mark_dirty();
         }
-        self.mark_dirty();
-        self.lines.len()
     }
 
     pub fn insert_line_at(&mut self, row: usize, text: String) {
@@ -138,27 +138,22 @@ impl Buffer {
         self.mark_dirty();
     }
 
-    /*pub fn prepend_to_line(&mut self, row: usize, text: &str) {
-        if let Some(line) = self.lines.get_mut(row) {
-            line.insert_str(0, text);
-            self.mark_dirty();
-        }
-    }*/
-
     pub fn remove_leading_spaces(&mut self, row: usize, n: usize) -> usize
     {
         if let Some(line) = self.lines.get_mut(row) {
             let mut space_count = 0;
+            let mut byte_to_remove = 0;
 
-            for c in line.chars() {
+            for (i, c) in line.char_indices() {
                 if c == ' ' && space_count < n {
                     space_count += 1;
+                    byte_to_remove = i + c.len_utf8();
                 } else {
                     break;
                 }
             }
-            if space_count > 0 {
-                line.replace_range(0..space_count, "");
+            if byte_to_remove > 0 {
+                line.replace_range(0..byte_to_remove, "");
                 self.mark_dirty();
             }
             return space_count;
