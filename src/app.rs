@@ -55,6 +55,98 @@ impl SearchState {
     }
 }
 
+pub struct FileTreeState {
+    pub list: Vec<PathBuf>,
+    pub selected: usize,
+    pub offset: usize,
+    pub show: bool,
+    pub current_dir: PathBuf,
+}
+
+impl FileTreeState {
+    pub fn new() -> Self {
+        let current_dir = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."));
+
+        Self {
+            list: Vec::new(),
+            selected: 0,
+            offset: 0,
+            show: true,
+            current_dir,
+        }
+    }
+
+    pub fn update_file_list(&mut self, path: PathBuf) {
+        let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
+            if abs_path.is_dir() {
+                abs_path
+            } else {
+                abs_path.parent()
+                    .unwrap_or(&abs_path)
+                    .to_path_buf()
+            }
+        } else {
+            path
+        };
+
+        if let Ok(entries) = fs::read_dir(&target_dir) {
+            self.current_dir = target_dir;
+            self.list.clear();
+
+            if let Some(parent) = self.current_dir.parent() {
+                self.list.push(parent.to_path_buf());
+            }
+
+            let mut files: Vec<PathBuf> = entries
+                .filter_map(|entry| entry.ok().map(|e| e.path()))
+                .collect();
+
+            files.sort();
+
+            self.list.extend(files);
+        }
+
+        self.selected = 0;
+        self.offset = 0;
+    }
+
+    pub fn down(&mut self, h: u16) {
+        if self.selected < self.list.len().saturating_sub(1) {
+            self.selected += 1;
+            self.scroll_tree(h);
+        }
+    }
+
+    pub fn up(&mut self, h: u16) {
+        if self.selected > 0 {
+            self.selected -= 1;
+            self.scroll_tree(h);
+        }
+    }
+
+    pub fn file_tree_parent(&mut self) {
+        if let Some(parent) = self.current_dir.parent() {
+            let parent_path = parent.to_path_buf();
+            self.update_file_list(parent_path);
+        }
+    }
+
+    pub fn scroll_tree(&mut self, h: u16) {
+        let height = h as usize;
+
+        if height == 0 { return; }
+
+        if self.selected < self.offset {
+            self.offset = self.selected;
+        }
+
+        if self.selected >= self.offset + height {
+            self.offset = self.selected - height + 1;
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum AppMode {
     Normal,
@@ -81,16 +173,12 @@ pub struct App {
     pub pending_confirm_action: Option<ConfirmAction>,
     pub pending_cmd: Option<char>,
     pub yank_register: Option<String>,
-    pub file_list: Vec<PathBuf>,
-    pub file_list_selected: usize,
-    pub file_tree_offset: usize,
-    pub show_file_tree: bool,
-    pub current_dir: PathBuf,
     pub editor_viewport_height: u16,
     pub file_viewport_height: u16,
     pub history: HistoryManager,
     pub help_scroll_offset: usize,
     pub search: SearchState,
+    pub tree: FileTreeState,
     pub is_readonly: bool,
 }
 
@@ -114,20 +202,16 @@ impl App {
             pending_confirm_action: None,
             pending_cmd: None,
             yank_register: None,
-            file_list: Vec::new(),
-            file_list_selected: 0,
-            file_tree_offset: 0,
-            show_file_tree: true,
-            current_dir: current_dir.clone(),
             editor_viewport_height: 0,
             file_viewport_height: 0,
             history: HistoryManager::new(),
             help_scroll_offset: 0,
             search: SearchState::new(),
+            tree: FileTreeState::new(),
             is_readonly: false,
         };
 
-        app.update_file_list(current_dir);
+        app.tree.update_file_list(current_dir);
         app
     }
 
@@ -257,67 +341,14 @@ impl App {
         }
     }
 
+
     // ========= File Tree ===========
 
 
-    pub fn update_file_list(&mut self, path: PathBuf) {
-        let target_dir = if let Ok(abs_path) = fs::canonicalize(&path) {
-            if abs_path.is_dir() {
-                abs_path
-            } else {
-                abs_path.parent()
-                    .unwrap_or(&abs_path)
-                    .to_path_buf()
-            }
-        } else {
-            path
-        };
-
-        if let Ok(entries) = fs::read_dir(&target_dir) {
-            self.current_dir = target_dir;
-            self.file_list.clear();
-
-            if let Some(parent) = self.current_dir.parent() {
-                self.file_list.push(parent.to_path_buf());
-            }
-
-            let mut files: Vec<PathBuf> = entries
-                .filter_map(|entry| entry.ok().map(|e| e.path()))
-                .collect();
-
-            files.sort();
-
-            self.file_list.extend(files);
-        }
-        self.file_list_selected = 0;
-        self.file_tree_offset = 0;
-    }
-
-    pub fn file_tree_next(&mut self) {
-        if self.file_list_selected < self.file_list.len().saturating_sub(1) {
-            self.file_list_selected += 1;
-            self.scroll_tree();
-        }
-    }
-
-    pub fn file_tree_prev(&mut self) {
-        if self.file_list_selected > 0 {
-            self.file_list_selected -= 1;
-            self.scroll_tree();
-        }
-    }
-
-    pub fn file_tree_parent(&mut self) {
-        if let Some(parent) = self.current_dir.parent() {
-            let parent_path = parent.to_path_buf();
-            self.update_file_list(parent_path);
-        }
-    }
-
     pub fn file_tree_select(&mut self) {
-        if let Some(path) = self.file_list.get(self.file_list_selected).clone() {
+        if let Some(path) = self.tree.list.get(self.tree.selected).clone() {
             if path.is_dir() {
-                self.update_file_list(path.to_path_buf());
+                self.tree.update_file_list(path.to_path_buf());
             } else {
                 if self.is_buffer_modified() {
                     self.request_confirm(
@@ -333,19 +364,6 @@ impl App {
         }
     }
 
-    pub fn scroll_tree(&mut self) {
-        let height = self.file_viewport_height as usize;
-
-        if height == 0 { return; }
-
-        if self.file_list_selected < self.file_tree_offset {
-            self.file_tree_offset = self.file_list_selected;
-        }
-
-        if self.file_list_selected >= self.file_tree_offset + height {
-            self.file_tree_offset = self.file_list_selected - height + 1;
-        }
-    }
 
     // =========== File open, close, save ============
 

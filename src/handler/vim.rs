@@ -218,9 +218,9 @@ impl VimHandler {
                     },
                     "close" => app.close_file(),
                     "t" | "tree" => {
-                        app.show_file_tree = !app.show_file_tree;
+                        app.tree.show = !app.tree.show;
 
-                        if app.show_file_tree {
+                        if app.tree.show {
                             app.mode = AppMode::FileTree;
                         } else {
                             app.mode = AppMode::Normal;
@@ -259,10 +259,10 @@ impl VimHandler {
             KeyCode::Char('q') | KeyCode::Esc => {
                 app.mode = AppMode::Normal;
             }
-            KeyCode::Char('j') => app.file_tree_next(),
-            KeyCode::Char('k') => app.file_tree_prev(),
+            KeyCode::Char('j') => app.tree.down(app.file_viewport_height),
+            KeyCode::Char('k') => app.tree.up(app.file_viewport_height),
             KeyCode::Enter => app.file_tree_select(),
-            KeyCode::Backspace | KeyCode::Char('h') => app.file_tree_parent(),
+            KeyCode::Backspace | KeyCode::Char('h') => app.tree.file_tree_parent(),
             _ => {}
         }
     }

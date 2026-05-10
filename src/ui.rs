@@ -19,7 +19,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(if app.show_file_tree { 20 } else { 0 }),
+            Constraint::Percentage(if app.tree.show { 20 } else { 0 }),
             Constraint::Min(0),
         ])
         .split(main_chunks[0]);
@@ -28,15 +28,15 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let editor_area = content_chunks[1];
 
     // --- File tree ---
-    if app.show_file_tree {
+    if app.tree.show {
         app.file_viewport_height = tree_area.height.saturating_sub(2);
-        let items: Vec<ListItem> = app.file_list
+        let items: Vec<ListItem> = app.tree.list
             .iter()
             .enumerate()
-            .skip(app.file_tree_offset)
+            .skip(app.tree.offset)
             .take(app.file_viewport_height as usize)
             .map(|(i, path)| {
-                let is_selected = i == app.file_list_selected;
+                let is_selected = i == app.tree.selected;
 
                 let icon = if path.is_dir() {
                     "\u{f4d3}"
@@ -44,7 +44,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
                     "\u{f15b}"
                 };
 
-                let name = if let Some(parent) = app.current_dir.parent() {
+                let name = if let Some(parent) = app.tree.current_dir.parent() {
                     if path== parent {
                         "..".to_string()
                     } else {
