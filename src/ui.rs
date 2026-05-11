@@ -122,7 +122,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         let mut lines = Vec::new();
 
         for i in 0..line_num_area.height {
-            let line_idx = app.row_offset + i as usize;
+            let line_idx = app.view.row_offset + i as usize;
 
             if line_idx < app.buffer.lines.len() {
                 lines.push(Line::from(format!("{:3} \n", line_idx + 1)));
@@ -209,7 +209,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     
     let display_lines: Vec<Line> = all_lines
         .into_iter()
-        .skip(app.row_offset)
+        .skip(app.view.row_offset)
         .take(inner_editor_area.height as usize)
         .collect();
 
@@ -227,15 +227,15 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     let vim_status_text = format!("[{:?}]|ROW:{}COL:{}|FILE: {}|{}",
         app.mode,
-        app.cursor_y + 1,
-        app.cursor_x,
+        app.view.cursor_y + 1,
+        app.view.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
         );
     let other_status_text = format!("ROW:{}COL:{}|FILE:{}|{}",
-        app.cursor_y + 1,
-        app.cursor_x,
+        app.view.cursor_y + 1,
+        app.view.cursor_x,
         app.file_path.as_ref().map(|p| p.to_str()
             .unwrap_or("NO NAME")).unwrap_or("NO NAME"),
         lang_name,
@@ -260,15 +260,15 @@ pub fn render(f: &mut Frame, app: &mut App) {
     }
 
     if app.mode != AppMode::FileTree {
-        if let Some(line) = app.buffer.lines.get(app.cursor_y) {
+        if let Some(line) = app.buffer.lines.get(app.view.cursor_y) {
             let cx = line.chars()
-                .take(app.cursor_x)
+                .take(app.view.cursor_x)
                 .collect::<String>()
                 .width();
 
             f.set_cursor_position(Position {
                 x: inner_editor_area.x + cx as u16,
-                y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,
+                y: inner_editor_area.y + (app.view.cursor_y - app.view.row_offset) as u16,
             });
         }
     }
@@ -327,14 +327,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
                 f.render_widget(Paragraph::new(msg.as_str()), main_chunks[2]);
             }
 
-            if let Some(current_line) = app.buffer.lines.get(app.cursor_y) {
+            if let Some(current_line) = app.buffer.lines.get(app.view.cursor_y) {
                 let prefix: String = current_line.chars()
-                    .take(app.cursor_x)
+                    .take(app.view.cursor_x)
                     .collect();
                 let cursor_x_display = UnicodeWidthStr::width(prefix.as_str());
                 f.set_cursor_position(Position {
                     x: inner_editor_area.x + cursor_x_display as u16,
-                    y: inner_editor_area.y + (app.cursor_y - app.row_offset) as u16,
+                    y: inner_editor_area.y + (app.view.cursor_y - app.view.row_offset) as u16,
                 });
             }
         }

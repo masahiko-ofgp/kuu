@@ -66,9 +66,9 @@ impl EmacsHandler {
             KeyCode::Char('n') => app.move_cursor_down(),
             KeyCode::Char('b') => app.move_cursor_left(),
             KeyCode::Char('f') => app.move_cursor_right(),
-            KeyCode::Char('a') => app.cursor_x = 0,
+            KeyCode::Char('a') => app.view.cursor_x = 0,
             KeyCode::Char('e') => {
-                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count();
+                app.view.cursor_x = app.buffer.lines[app.view.cursor_y].chars().count();
             }
             KeyCode::Char('d') => app.delete_char(),
             KeyCode::Char('k') => {
@@ -76,11 +76,11 @@ impl EmacsHandler {
                 app.history.finish_group();
             }
             KeyCode::Char('o') => {
-                let saved_x = app.cursor_x;
-                let saved_y = app.cursor_y;
+                let saved_x = app.view.cursor_x;
+                let saved_y = app.view.cursor_y;
                 app.insert_newline();
-                app.cursor_x = saved_x;
-                app.cursor_y = saved_y;
+                app.view.cursor_x = saved_x;
+                app.view.cursor_y = saved_y;
             }
             KeyCode::Char('y') => {
                 app.put_before();
@@ -111,13 +111,13 @@ impl EmacsHandler {
             KeyCode::Char('f') => app.move_word_forward(),
             KeyCode::Char('b') => app.move_word_backward(),
             KeyCode::Char('<') => {
-                app.cursor_y = 0;
-                app.cursor_x = 0;
+                app.view.cursor_y = 0;
+                app.view.cursor_x = 0;
             }
             KeyCode::Char('>') => {
-                app.cursor_y = app.buffer.lines.len()
+                app.view.cursor_y = app.buffer.lines.len()
                     .saturating_sub(1);
-                app.cursor_x = app.buffer.lines[app.cursor_y].chars().count();
+                app.view.cursor_x = app.buffer.lines[app.view.cursor_y].chars().count();
             }
             KeyCode::Char('v') => app.scroll_half_page_up(),
             KeyCode::Char('x') => {

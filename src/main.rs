@@ -6,6 +6,9 @@ mod handler;
 mod config;
 mod highlight;
 mod history;
+mod search;
+mod file_tree;
+mod view;
 
 use anyhow::Result;
 use app::{App, AppMode};

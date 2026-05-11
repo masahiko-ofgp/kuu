@@ -35,8 +35,8 @@ impl VimHandler {
             match (op, key.code) {
                 ('d', KeyCode::Char('d')) => app.delete_current_line(),
                 ('g', KeyCode::Char('g')) => {
-                    app.cursor_y = 0;
-                    app.cursor_x = 0;
+                    app.view.cursor_y = 0;
+                    app.view.cursor_x = 0;
                 }
                 ('y', KeyCode::Char('y')) => app.yank_current_line(),
                 ('>', KeyCode::Char('>')) => app.indent_current_line(),
@@ -56,7 +56,7 @@ impl VimHandler {
             },
             KeyCode::Char('x') => app.delete_char(),
             KeyCode::Char('a') => {
-                app.cursor_x += 1;
+                app.view.cursor_x += 1;
                 app.history.start_group();
                 app.mode = AppMode::Insert;
             },
@@ -78,9 +78,9 @@ impl VimHandler {
             },
             KeyCode::Char('w') => app.move_word_forward(),
             KeyCode::Char('b') => app.move_word_backward(),
-            KeyCode::Char('0') => app.cursor_x = 0,
+            KeyCode::Char('0') => app.view.cursor_x = 0,
             KeyCode::Char('$') => {
-                app.cursor_x = app.buffer.lines[app.cursor_y]
+                app.view.cursor_x = app.buffer.lines[app.view.cursor_y]
                     .chars()
                     .count()
                     .saturating_sub(1);
